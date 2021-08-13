@@ -105,10 +105,13 @@ parser.add_argument('--std', type=float, nargs='+', default=None, metavar='STD',
                     help='Override std deviation of of dataset')
 parser.add_argument('--interpolation', default='', type=str, metavar='NAME',
                     help='Image resize interpolation type (overrides model)')
-parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-vb', '--validation-batch-size-multiplier', type=int, default=1, metavar='N',
                     help='ratio of validation batch size to training batch size (default: 1)')
+
+# python train.py ../Hand --model resnet18
+# python train.py ../covid --model resnet18
 
 # Optimizer parameters
 parser.add_argument('--opt', default='sgd', type=str, metavar='OPTIMIZER',
@@ -248,7 +251,7 @@ parser.add_argument('--recovery-interval', type=int, default=0, metavar='N',
                     help='how many batches to wait before writing recovery checkpoint')
 parser.add_argument('--checkpoint-hist', type=int, default=10, metavar='N',
                     help='number of checkpoints to keep (default: 10)')
-parser.add_argument('-j', '--workers', type=int, default=4, metavar='N',
+parser.add_argument('-j', '--workers', type=int, default=1, metavar='N',
                     help='how many training processes to use (default: 1)')
 parser.add_argument('--save-images', action='store_true', default=False,
                     help='save images of input bathes every log interval for debugging')
@@ -552,8 +555,9 @@ def main():
     elif args.smoothing:
         train_loss_fn = LabelSmoothingCrossEntropy(smoothing=args.smoothing).cuda()
     else:
-        train_loss_fn = nn.CrossEntropyLoss().cuda()
-    validate_loss_fn = nn.CrossEntropyLoss().cuda()
+        # train_loss_fn = nn.CrossEntropyLoss().cuda()
+        train_loss_fn = nn.MSELoss().cuda()
+    validate_loss_fn = nn.MSELoss().cuda()
 
     # setup checkpoint saver and eval metric tracking
     eval_metric = args.eval_metric
