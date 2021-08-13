@@ -35,6 +35,16 @@ def find_images_and_targets(folder, types=IMG_EXTENSIONS, class_to_idx=None, lea
         images_and_targets = sorted(images_and_targets, key=lambda k: natural_key(k[0]))
     return images_and_targets, class_to_idx
 
+def find_images_and_targets2(folder, types=IMG_EXTENSIONS, class_to_idx=None, leaf_name_only=True, sort=True):
+    labels = []
+    filenames = []
+    txt_path = os.path.join(folder, '.txt')
+    with open(txt_path) as input_file:
+        lines = input_file.readlines()
+        filenames = [os.path.join(folder, line.strip().split('\t')[0]) for line in lines]
+        labels = [float(line.strip().split('\t')[-1]) for line in lines]
+    images_and_targets = zip(filenames, labels)
+    return images_and_targets, class_to_idx
 
 class ParserImageFolder(Parser):
 
