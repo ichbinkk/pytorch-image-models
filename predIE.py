@@ -42,10 +42,10 @@ model_name = "swim-vit"
 num_classes = 1
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 16
+batch_size = 64
 
 # Number of epochs to train for
-num_epochs = 10
+num_epochs = 100
 
 lr = 0.001
 
