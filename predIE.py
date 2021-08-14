@@ -29,7 +29,7 @@ from torch.autograd import Variable
 
 # data_dir = "./data/dlp_data"
 # infile = './data/dlp_data/Hand-hold-0.2mm-slices/'
-infile = './data/dlp_data/Hand/'
+infile = '../Hand/'
 fn = infile.split('/')[-2]
 
 '''
