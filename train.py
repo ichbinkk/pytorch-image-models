@@ -71,7 +71,7 @@ parser.add_argument('-c', '--config', default='', type=str, metavar='FILE',
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('data_dir', metavar='DIR',
+parser.add_argument('--data_dir', metavar='DIR', default='../covid',
                     help='path to dataset')
 parser.add_argument('--dataset', '-d', metavar='NAME', default='',
                     help='dataset type (default: ImageFolder/ImageTar if empty)')
@@ -79,7 +79,7 @@ parser.add_argument('--train-split', metavar='NAME', default='train',
                     help='dataset train split (default: train)')
 parser.add_argument('--val-split', metavar='NAME', default='validation',
                     help='dataset validation split (default: validation)')
-parser.add_argument('--model', default='resnet101', type=str, metavar='MODEL',
+parser.add_argument('--model', default='resnet18', type=str, metavar='MODEL',
                     help='Name of model to train (default: "countception"')
 parser.add_argument('--pretrained', action='store_true', default=False,
                     help='Start with pretrained version of specified network (if avail)')
@@ -105,13 +105,10 @@ parser.add_argument('--std', type=float, nargs='+', default=None, metavar='STD',
                     help='Override std deviation of of dataset')
 parser.add_argument('--interpolation', default='', type=str, metavar='NAME',
                     help='Image resize interpolation type (overrides model)')
-parser.add_argument('-b', '--batch-size', type=int, default=1, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-vb', '--validation-batch-size-multiplier', type=int, default=1, metavar='N',
                     help='ratio of validation batch size to training batch size (default: 1)')
-
-# python train.py ../Hand --model resnet18
-# python train.py ../covid --model resnet18
 
 # Optimizer parameters
 parser.add_argument('--opt', default='sgd', type=str, metavar='OPTIMIZER',
@@ -304,6 +301,7 @@ def _parse_args():
 def main():
     setup_default_logging()
     args, args_text = _parse_args()
+
     
     if args.log_wandb:
         if has_wandb:
@@ -660,7 +658,9 @@ def train_one_epoch(
         with amp_autocast():
             output = model(input)
             loss = loss_fn(output, target)
-
+        # debug for specific batch
+        if batch_idx == 224:
+            tb = 0
         if not args.distributed:
             losses_m.update(loss.item(), input.size(0))
 

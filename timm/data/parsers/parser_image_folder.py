@@ -13,30 +13,40 @@ from .parser import Parser
 from .class_map import load_class_map
 from .constants import IMG_EXTENSIONS
 
+import numpy as np
 
-# def find_images_and_targets(folder, types=IMG_EXTENSIONS, class_to_idx=None, leaf_name_only=True, sort=True):
-#     labels = []
-#     filenames = []
-#     for root, subdirs, files in os.walk(folder, topdown=False, followlinks=True):
-#         rel_path = os.path.relpath(root, folder) if (root != folder) else ''
-#         label = os.path.basename(rel_path) if leaf_name_only else rel_path.replace(os.path.sep, '_')
-#         for f in files:
-#             base, ext = os.path.splitext(f)
-#             if ext.lower() in types:
-#                 filenames.append(os.path.join(root, f))
-#                 labels.append(label)
-#     if class_to_idx is None:
-#         # building class index
-#         unique_labels = set(labels)
-#         sorted_labels = list(sorted(unique_labels, key=natural_key))
-#         class_to_idx = {c: idx for idx, c in enumerate(sorted_labels)}
-#     images_and_targets = [(f, class_to_idx[l]) for f, l in zip(filenames, labels) if l in class_to_idx]
-#     if sort:
-#         images_and_targets = sorted(images_and_targets, key=lambda k: natural_key(k[0]))
-#     print(images_and_targets)
-#     return images_and_targets, class_to_idx
 
 def find_images_and_targets(folder, types=IMG_EXTENSIONS, class_to_idx=None, leaf_name_only=True, sort=True):
+    labels = []
+    filenames = []
+    for root, subdirs, files in os.walk(folder, topdown=False, followlinks=True):
+        rel_path = os.path.relpath(root, folder) if (root != folder) else ''
+        label = os.path.basename(rel_path) if leaf_name_only else rel_path.replace(os.path.sep, '_')
+        for f in files:
+            base, ext = os.path.splitext(f)
+            if ext.lower() in types:
+                filenames.append(os.path.join(root, f))
+                labels.append(label)
+    if class_to_idx is None:
+        # building class index
+        unique_labels = set(labels)
+        sorted_labels = list(sorted(unique_labels, key=natural_key))
+        class_to_idx = {c: idx for idx, c in enumerate(sorted_labels)}
+    images_and_targets = [(f, class_to_idx[l]) for f, l in zip(filenames, labels) if l in class_to_idx]
+    if sort:
+        images_and_targets = sorted(images_and_targets, key=lambda k: natural_key(k[0]))
+    # print(images_and_targets)
+    return images_and_targets, class_to_idx
+
+def Normalize(data):
+    # res = []
+    data = np.array(data)
+    meanVal = np.mean(data)
+    stdVal = np.std(data)
+    res = (data - meanVal) / stdVal
+    return res, meanVal, stdVal
+
+def find_images_and_targets2(folder, types=IMG_EXTENSIONS, class_to_idx=None, leaf_name_only=True, sort=True):
     labels = []
     filenames = []
     for root, subdirs, files in os.walk(folder, topdown=False, followlinks=True):
@@ -47,6 +57,7 @@ def find_images_and_targets(folder, types=IMG_EXTENSIONS, class_to_idx=None, lea
         lines = input_file.readlines()
         filenames = [os.path.join(folder, line.strip().split('\t')[0]) for line in lines]
         labels = [float(line.strip().split('\t')[-1]) for line in lines]
+    # labels, meanVal, stdVal = Normalize(labels)
     # images_and_targets = (filenames, labels)
     images_and_targets = [(f, l) for f, l in zip(filenames, labels)]
     # print(images_and_targets)
