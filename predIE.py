@@ -605,7 +605,7 @@ if __name__ == '__main__':
 
     # 绘制期望和预测的结果
     plt.figure()
-    plt.title(model_name +"_"+str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)+"Validation Result")
+    plt.title(model_name + "_" +str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "Validation Result")
     ts = range(len(test_lab))
     plt.plot(ts, test_lab, label="test_lab")
     plt.plot(ts, result, label="pred_lab")
@@ -614,7 +614,26 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     # 输出预测的结果到txt文件
-    np.savetxt('./output/' + fn +"_" + model_name +"_"+ str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), result, fmt='%s')
+    np.savetxt('./output/' + 'Result of ' + fn +"_" + model_name +"_"+ str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), result, fmt='%s')
+
+#######################################################################
+    ### 分析每层误差信息 ###
+    error = (result-test_lab)/test_lab
+    print('Mean(error) is {:.2%}.'.format(np.mean(error)))
+    print('Max(error) is {:.2%}.'.format(np.max(error)))
+    print('Min(error) is {:.2%}.'.format(np.min(error)))
+    print('Std(error) is {:.2f}.'.format(np.std(error)))
+    ### 分析总误差信息 ###
+    E1 = np.sum(test_lab)
+    E2 = np.sum(result)
+    Er = (E1-E2)/E2
+    print('Actual total EC is {:.2f}J. Predicted total EC is {:.2f}J. Er is {:.2%}'.format(E1,E2,Er))
+
+    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er]
+    np.savetxt('./output/' + 'Error of ' + fn + "_" + model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size),
+               np.array(res_error), fmt='%s')
+
+
 
 ######################################################################
 # Final Thoughts and Where to Go Next
