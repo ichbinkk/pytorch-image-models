@@ -19,33 +19,37 @@ import time
 import os
 import copy
 
+from torch.autograd import Variable
 from torch.utils.data import Dataset
 from PIL import Image
 import timm.models as tm
-
-from torch.autograd import Variable
-
+import argparse
 
 
-# data_dir = "./data/dlp_data"
+
+
+# data_dir = "../Hand"
 # infile = './data/dlp_data/Hand-hold-0.2mm-slices/'
-infile = '../Hand/'
-fn = infile.split('/')[-2]
+
 
 '''
+Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, vit, pit, mixer, swim-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-model_name = "swim-vit"
+# model_name = "resnet"
+
+# infile = '../Hand/'
+
 
 # Number of classes in the dataset
 num_classes = 1
 
 # Batch size for training (change depending on how much memory you have)
-batch_size = 64
+# batch_size = 64
 
 # Number of epochs to train for
-num_epochs = 100
+# num_epochs = 100
 
 lr = 0.001
 
@@ -55,6 +59,20 @@ lr = 0.001
 feature_extract = False
 
 parm = {}  # 初始化保存模块参数的parm字典
+
+# Set argparse
+parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+
+# Dataset / Model parameters
+parser.add_argument('--data_dir', metavar='DIR', default='../Hand',
+                    help='path to dataset')
+parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
+                    help='Name of model to train (default: "resnet"')
+parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
+                    help='input batch size for training (default: 32)')
+parser.add_argument('--epochs', type=int, default=100, metavar='N',
+                    help='number of epochs to train (default: 100)')
+
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
     since = time.time()
@@ -194,23 +212,23 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
     model_ft = None
     input_size = 0
 
-    # if model_name == "resnet":
-    #     """ Resnet18
-    #     """
-    #     model_ft = models.resnet34(pretrained=use_pretrained)
-    #     set_parameter_requires_grad(model_ft, feature_extract)
-    #     num_ftrs = model_ft.fc.in_features
-    #     model_ft.fc = nn.Linear(num_ftrs, num_classes)
-    #     input_size = 224
-
     if model_name == "resnet":
         """ Resnet18
         """
-        model_ft = tm.resnet34(pretrained=use_pretrained)
+        model_ft = models.resnet34(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 224
+
+    # if model_name == "resnet":
+    #     """ Resnet34
+    #     """
+    #     model_ft = tm.resnet34(pretrained=use_pretrained)
+    #     set_parameter_requires_grad(model_ft, feature_extract)
+    #     num_ftrs = model_ft.fc.in_features
+    #     model_ft.fc = nn.Linear(num_ftrs, num_classes)
+    #     input_size = 224
 
     elif model_name == "vit":
         """ vit
@@ -383,13 +401,26 @@ def InvNormalize(data, meanVal, stdVal):
 if __name__ == '__main__':
     print("PyTorch Version: ", torch.__version__)
     print("Torchvision Version: ", torchvision.__version__)
+    args = parser.parse_args()
+    infile = args.data_dir
+    model_name = args.model
+    batch_size = args.batch_size
+    num_epochs = args.epochs
 
+    fn = infile.split('/')[-1]
     # Initialize the model for this run
     model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
 
     # Print the model we just instantiated
-    print(model_ft)
+    # print(model_ft)
 
+    # Print computational params
+    from torchstat import stat
+    # stat(model_ft, (3, 224, 224))
+    from thop import profile
+    input = torch.randn(1, 3, 224, 224)
+    macs, params = profile(model_ft, inputs=(input,))
+    print('The model Params: {:.2f}M, MACs: {:.2f}M'.format(params/10e6, macs/10e6))
 
     ######################################################################
     # Load Data
@@ -438,7 +469,7 @@ if __name__ == '__main__':
     # 训练集2
 
     image_datasets = {x: customData(img_path=infile,
-                                    txt_path=(infile + x + '.txt'),
+                                    txt_path=os.path.join(infile, (x + '.txt')),
                                     data_transforms=data_transforms,
                                     dataset=x) for x in ['train', 'val']}
 
@@ -484,12 +515,12 @@ if __name__ == '__main__':
     print("Params to learn:")
     if feature_extract:
         params_to_update = []
-        for name,param in model_ft.named_parameters():
+        for name, param in model_ft.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
                 print("\t",name)
     else:
-        for name,param in model_ft.named_parameters():
+        for name, param in model_ft.named_parameters():
             if param.requires_grad == True:
                 print("\t",name)
 
