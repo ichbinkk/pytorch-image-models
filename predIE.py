@@ -70,8 +70,8 @@ parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('--epochs', type=int, default=100, metavar='N',
-                    help='number of epochs to train (default: 100)')
+parser.add_argument('--epochs', type=int, default=10, metavar='N',
+                    help='number of epochs to train (default: 10)')
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
@@ -178,7 +178,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     # np.savetxt("Parm.txt", kernal)
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     # print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
@@ -592,12 +592,13 @@ if __name__ == '__main__':
     # plt.ylim((0, 2.))
     # plt.xticks(np.arange(1, num_epochs+1, 1.0))
     plt.legend()
+    plt.savefig(os.path.join('./output/', ('Hist of ' + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + '.png')))
     plt.show()
-    np.savetxt("./output/train_hist" + fn + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
-    np.savetxt("./output/val_hist" + fn + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), val_hist)
+    np.savetxt("./output/train_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
+    np.savetxt("./output/val_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), val_hist)
 
     ### 逆归一化，输出 ‘预测的结果’ ###
-    test_lab = loadCol(infile + 'train.txt', 1)
+    test_lab = loadCol(os.path.join(infile, 'train.txt'), 1)
     _, meanVal, stdVal = Normalize(test_lab)
 
     result = InvNormalize(result, meanVal, stdVal)
