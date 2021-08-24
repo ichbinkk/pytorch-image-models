@@ -414,14 +414,14 @@ if __name__ == '__main__':
     # Print the model we just instantiated
     # print(model_ft)
 
-    # Print computational params
-    from torchstat import stat
-    stat(model_ft, (3, 224, 224))
-
-    from thop import profile
-    input = torch.randn(1, 3, 224, 224)
-    macs, params = profile(model_ft, inputs=(input,))
-    print('The model Params: {:.2f}M, MACs: {:.2f}M'.format(params/10e6, macs/10e6))
+    ### Print computational params ###
+    # from torchstat import stat
+    # stat(model_ft, (3, 224, 224))
+    #
+    # from thop import profile
+    # input = torch.randn(1, 3, 224, 224)
+    # macs, params = profile(model_ft, inputs=(input,))
+    # print('The model Params: {:.2f}M, MACs: {:.2f}M'.format(params/10e6, macs/10e6))
 
     ######################################################################
     # Load Data
