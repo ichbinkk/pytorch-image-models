@@ -416,7 +416,8 @@ if __name__ == '__main__':
 
     # Print computational params
     from torchstat import stat
-    # stat(model_ft, (3, 224, 224))
+    stat(model_ft, (3, 224, 224))
+
     from thop import profile
     input = torch.randn(1, 3, 224, 224)
     macs, params = profile(model_ft, inputs=(input,))
