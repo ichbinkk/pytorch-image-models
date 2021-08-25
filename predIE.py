@@ -24,12 +24,10 @@ from torch.utils.data import Dataset
 from PIL import Image
 import timm.models as tm
 import argparse
-
-
-
-
-# data_dir = "../Hand"
-# infile = './data/dlp_data/Hand-hold-0.2mm-slices/'
+# 衡量误差
+from sklearn.metrics import mean_squared_error #均方误差
+from sklearn.metrics import mean_absolute_error #平方绝对误差
+from sklearn.metrics import r2_score#R square
 
 
 '''
@@ -37,10 +35,6 @@ Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, vit, pit, mixer, swim-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-# model_name = "resnet"
-
-# infile = '../Hand/'
-
 
 # Number of classes in the dataset
 num_classes = 1
@@ -64,14 +58,14 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../Hand',
+parser.add_argument('--data_dir', metavar='DIR', default='../ECC',
                     help='path to dataset')
 parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                    help='number of epochs to train (default: 10)')
+parser.add_argument('--epochs', type=int, default=1, metavar='N',
+                    help='number of epochs to train (default: 1)')
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
@@ -206,7 +200,7 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model(model_name, num_classes, feature_extract, use_pretrained=True):
+def initialize_model(model_name, num_classes, feature_extract, use_pretrained=False):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -336,7 +330,7 @@ class customData(Dataset):
         with open(txt_path) as input_file:
             lines = input_file.readlines()
             self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
-            self.img_label = [float(line.strip().split('\t')[-1]) for line in lines]
+            self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
         # 对y做归一化
         ln = len(self.img_label)
         y = self.img_label
@@ -379,7 +373,8 @@ def loadCol(infile, k):
     #     for j in range(k):
     #         #dataset[i].append(float(dataset[i][j]))
     #         dataset[i][j] = float(dataset[i][j])
-    dataset = [float(s) for s in dataset]
+    if dataset[0].split('.')[-1] != 'png':
+        dataset = [float(s) for s in dataset]
     return dataset
 
 def Normalize(data):
@@ -440,13 +435,13 @@ if __name__ == '__main__':
             # transforms.RandomResizedCrop(input_size),
             # transforms.RandomHorizontalFlip(),
             # transforms.Resize(input_size),
-            transforms.CenterCrop(input_size),
+            # transforms.CenterCrop(input_size),
+            transforms.Resize(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-            # transforms.Resize(input_size),
-            transforms.CenterCrop(input_size),
+            transforms.Resize(input_size),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
@@ -528,7 +523,7 @@ if __name__ == '__main__':
     # Observe that all parameters are being optimized
 
     # optimizer_ft = optim.SGD(params_to_update, lr, momentum=0.9)
-    optimizer_ft = optim.Adam(params_to_update, lr, weight_decay=0.01)
+    optimizer_ft = optim.Adam(params_to_update, lr, weight_decay=0.05)
 
     ######################################################################
     # Run Training and Validation Step
@@ -583,9 +578,9 @@ if __name__ == '__main__':
     # ohist = hist
     # shist = scratch_hist
 
-    # 绘制损失曲线
+    # 绘制训练和验证的损失曲线
     plt.figure()
-    plt.title("Validation Accuracy vs. Number of Training Epochs")
+    plt.title("Train and val Loss history vs. Number of Training Epochs")
     plt.xlabel("Training Epochs")
     plt.ylabel("Validation Accuracy")
     plt.plot(range(1, num_epochs + 1), train_hist, label="train_hist")
@@ -598,11 +593,31 @@ if __name__ == '__main__':
     np.savetxt("./output/train_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
     np.savetxt("./output/val_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), val_hist)
 
-    ### 逆归一化，输出 ‘预测的结果’ ###
-    test_lab = loadCol(os.path.join(infile, 'train.txt'), 1)
+    #######################################################################
+    # -----------------------Evaluation--------------------------------
+    ### 逆归一化，输出 test 的‘预测的结果’ ###
+    test_img_path = loadCol(os.path.join(infile, 'test.txt'), 0)
+    test_lab = loadCol(os.path.join(infile, 'test.txt'), 1)
     _, meanVal, stdVal = Normalize(test_lab)
 
-    result = InvNormalize(result, meanVal, stdVal)
+    model_ft.eval()
+    torch.no_grad()
+    result = []
+    transform = transforms.Compose([
+        transforms.Resize(input_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    for i in range(len(test_img_path)):
+        test_img = Image.open(os.path.join(infile, test_img_path[i])).convert('RGB')
+        test_img = transform(test_img).unsqueeze(0)
+        test_img = test_img.to(device)
+        out = model_ft(test_img)
+        out = out.detach().cpu().numpy()
+        out_v = out[0][0] * stdVal + meanVal
+        # print(out_v)
+        result.append(out_v)
 
     # 绘制期望和预测的结果
     plt.figure()
@@ -617,20 +632,30 @@ if __name__ == '__main__':
     # 输出预测的结果到txt文件
     np.savetxt('./output/' + 'Result of ' + fn +"_" + model_name +"_"+ str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), result, fmt='%s')
 
-#######################################################################
-    ### 分析每层误差信息 ###
-    error = (result-test_lab)/test_lab
-    print('Mean(error) is {:.2%}.'.format(np.mean(error)))
-    print('Max(error) is {:.2%}.'.format(np.max(error)))
-    print('Min(error) is {:.2%}.'.format(np.min(error)))
-    print('Std(error) is {:.2f}.'.format(np.std(error)))
-    ### 分析总误差信息 ###
+    ### 分析'每层误差信息' ###
+    result = np.array(result)
+    test_lab = np.array(test_lab)
+    print('[每层误差信息]')
+    error = (result - test_lab)/test_lab
+    print('Mean(error): {:.2%}.'.format(np.mean(error)))
+    print('Max(error): {:.2%}.'.format(np.max(error)))
+    print('Min(error): {:.2%}.'.format(np.min(error)))
+    print('Std(error): {:.2f}.'.format(np.std(error)))
+    # 调用误差 RMSE, Mae, R^2
+    Rs = mean_squared_error(test_lab, result) ** 0.5
+    Mae = mean_absolute_error(test_lab, result)
+    R2_s = r2_score(test_lab, result)
+    print('Root mean_squared_error: {:.2f}J, Mean_absolute_error: {:.2f}, R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
+
+    ### 分析'总误差信息' ###
+    print('[总误差信息]')
     E1 = np.sum(test_lab)
     E2 = np.sum(result)
     Er = (E1-E2)/E2
-    print('Actual total EC is {:.2f}J. Predicted total EC is {:.2f}J. Er is {:.2%}'.format(E1,E2,Er))
+    print('Actual total EC: {:.2f}J, Predicted total EC: {:.2f}J, Er: {:.2%}'.format(E1,E2,Er))
 
-    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er]
+
+    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er, Rs, Mae, R2_s]
     np.savetxt('./output/' + 'Error of ' + fn + "_" + model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size),
                np.array(res_error), fmt='%s')
 
