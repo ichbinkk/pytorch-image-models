@@ -608,7 +608,7 @@ if __name__ == '__main__':
     #######################################################################
     # -----------------------Evaluation--------------------------------
     ### 逆归一化，输出 val 的‘预测的结果’ ###
-    test_lab = loadCol(os.path.join(infile, 'val.txt'), 1)[:591]
+    test_lab = loadCol(os.path.join(infile, 'val.txt'), 1)[591:]
     _, meanVal, stdVal = Normalize(test_lab)
     result = InvNormalize(result, meanVal, stdVal)
 
@@ -677,23 +677,4 @@ if __name__ == '__main__':
     np.savetxt('./output/' + 'Error of ' + fn + "_" + model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size),
                np.array(res_error), fmt='%s')
 
-
-
-######################################################################
-# Final Thoughts and Where to Go Next
-# -----------------------------------
-#
-# Try running some of the other models and see how good the accuracy gets.
-# Also, notice that feature extracting takes less time because in the
-# backward pass we do not have to calculate most of the gradients. There
-# are many places to go from here. You could:
-#
-# -  Run this code with a harder dataset and see some more benefits of
-#    transfer learning
-# -  Using the methods described here, use transfer learning to update a
-#    different model, perhaps in a new domain (i.e. NLP, audio, etc.)
-# -  Once you are happy with a model, you can export it as an ONNX model,
-#    or trace it using the hybrid frontend for more speed and optimization
-#    opportunities.
-#
 
