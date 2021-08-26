@@ -30,11 +30,7 @@ from sklearn.metrics import mean_absolute_error #平方绝对误差
 from sklearn.metrics import r2_score#R square
 
 
-'''
-Setting model and training params, some can use parser to get value.
-Models to choose from [resnet, vit, pit, mixer, swim-vit
-alexnet, vgg, squeezenet, densenet, inception]
-'''
+
 
 # Number of classes in the dataset
 num_classes = 1
@@ -60,11 +56,16 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # Dataset / Model parameters
 parser.add_argument('--data_dir', metavar='DIR', default='../ECC',
                     help='path to dataset')
+'''
+Setting model and training params, some can use parser to get value.
+Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
+alexnet, vgg, squeezenet, densenet, inception]
+'''
 parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet"')
-parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=3, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=1, metavar='N',
                     help='number of epochs to train (default: )')
 
 
@@ -78,7 +79,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     kernal = np.empty((0, 3))
 
     best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
+    min_loss = 999999
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -145,6 +146,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 train_acc_history.append(epoch_loss)
             if phase == 'val':
                 val_acc_history.append(epoch_loss)
+                if epoch_loss < min_loss:
+                    best_model_wts = copy.deepcopy(model.state_dict())
 
 
             # 删掉acc 因为回归问题不存在acc
@@ -209,7 +212,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     if model_name == "resnet":
         """ Resnet
         """
-        model_ft = models.resnet101(pretrained=use_pretrained)
+        model_ft = models.resnet18(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
@@ -224,6 +227,46 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     #     model_ft.fc = nn.Linear(num_ftrs, num_classes)
     #     input_size = 224
 
+    elif model_name == "regnet":
+        """ regnet
+            regnety_040， regnety_080， regnety_160
+        """
+        model_ft = tm.regnety_040(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "efficientnet_b2":
+        """ 
+            efficientnet_b2 256, efficientnet_b3 288, efficientnet_b4 320
+        """
+        model_ft = tm.efficientnet_b2(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 256
+
+    elif model_name == "efficientnet_b3":
+        """ 
+            efficientnet_b2 256, efficientnet_b3 288, efficientnet_b4 320
+        """
+        model_ft = tm.efficientnet_b3(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 288
+
+    elif model_name == "efficientnet_b4":
+        """ 
+            efficientnet_b2 256, efficientnet_b3 288, efficientnet_b4 320
+        """
+        model_ft = tm.efficientnet_b4(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.classifier = nn.Linear(num_ftrs, num_classes)
+        input_size = 320
+
     elif model_name == "vit":
         """ vit
         """
@@ -236,7 +279,17 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     elif model_name == "pit":
         """ pit
         """
-        model_ft = tm.pit_b_224(pretrained=use_pretrained)
+        model_ft = tm.pit_xs_224(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.head = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "deit":
+        """ deit
+            deit_small_patch16_224, deit_base_patch16_224
+        """
+        model_ft = tm.deit_small_patch16_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.head.in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
@@ -251,10 +304,10 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "swim-vit":
-        """ swim-vit
+    elif model_name == "swin-vit":
+        """ swin-vit
         """
-        model_ft = tm. swin_base_patch4_window7_224(pretrained=use_pretrained)
+        model_ft = tm. swin_tiny_patch4_window7_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.head.in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
@@ -336,7 +389,7 @@ class customData(Dataset):
             for line in lines:
                 img_name = line.strip().split('\t')[0]
                 img_prefix = img_name.split('-')[0]
-                if img_prefix in ['A2','B1','C2','D2','E1']:
+                if img_prefix in ['A2','B1','C2','D2','E1']:   # 指定训练数据位置
                     self.img_name.append(os.path.join(img_path,img_name))
                     self.img_label.append(float(line.strip().split('\t')[1]))
         # 对y做归一化
@@ -412,7 +465,7 @@ if __name__ == '__main__':
 
     fn = infile.split('/')[-1]
     # Initialize the model for this run
-    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
+    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=False)
 
     # Print the model we just instantiated
     # print(model_ft)
@@ -444,12 +497,12 @@ if __name__ == '__main__':
             # transforms.RandomHorizontalFlip(),
             # transforms.Resize(input_size),
             # transforms.CenterCrop(input_size),
-            transforms.Resize(input_size),
+            transforms.Resize([input_size, input_size]),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-            transforms.Resize(input_size),
+            transforms.Resize([input_size, input_size]),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
@@ -480,7 +533,7 @@ if __name__ == '__main__':
     # wrap your data and label into Tensor
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                  batch_size=batch_size,
-                                                 shuffle=False,
+                                                 shuffle = True if x == 'train' else False,
                                                  # num_workers=1
                                                        ) for x in ['train', 'val']}  # 这里的shuffle可以打乱数据顺序！！！
 
@@ -588,6 +641,12 @@ if __name__ == '__main__':
     # shist = scratch_hist
 
     # 绘制训练和验证的损失曲线
+    # output path
+    out_path = './output'
+    if not os.path.exists(out_path):
+        # 如果不存在则创建目录
+        os.makedirs(out_path)
+
     plt.figure()
     plt.title("Train and val Loss history vs. Number of Training Epochs")
     plt.xlabel("Training Epochs")
@@ -599,7 +658,6 @@ if __name__ == '__main__':
     plt.legend()
     plt.savefig(os.path.join('./output/', ('Hist of ' + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + '.png')))
     plt.show()
-    # output txt
     hist = np.vstack((train_hist, val_hist))
     np.savetxt("./output/Hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), hist.T)
     # np.savetxt("./output/train_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
