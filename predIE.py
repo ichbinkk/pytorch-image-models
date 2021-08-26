@@ -329,8 +329,14 @@ class customData(Dataset):
     def __init__(self, img_path, txt_path, dataset = '', data_transforms=None, loader = default_loader):
         with open(txt_path) as input_file:
             lines = input_file.readlines()
-            self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
-            self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
+            # self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
+            # self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
+            for line in lines:
+                img_name = line.strip().split('\t')[0]
+                img_prefix = img_name.split('-')[0]
+                if img_prefix in ['A1','B1','C1','D1','E1']:
+                    self.img_name.append(os.path.join(img_path,img_name))
+                    self.img_label.append(float(line.strip().split('\t')[1]))
         # 对y做归一化
         ln = len(self.img_label)
         y = self.img_label
@@ -595,29 +601,34 @@ if __name__ == '__main__':
 
     #######################################################################
     # -----------------------Evaluation--------------------------------
-    ### 逆归一化，输出 test 的‘预测的结果’ ###
-    test_img_path = loadCol(os.path.join(infile, 'test.txt'), 0)
-    test_lab = loadCol(os.path.join(infile, 'test.txt'), 1)
+    ### 逆归一化，输出 val 的‘预测的结果’ ###
+    test_lab = loadCol(os.path.join(infile, 'val.txt'), 1)[:591]
     _, meanVal, stdVal = Normalize(test_lab)
+    result = InvNormalize(result, meanVal, stdVal)
 
-    model_ft.eval()
-    torch.no_grad()
-    result = []
-    transform = transforms.Compose([
-        transforms.Resize(input_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
-    for i in range(len(test_img_path)):
-        test_img = Image.open(os.path.join(infile, test_img_path[i])).convert('RGB')
-        test_img = transform(test_img).unsqueeze(0)
-        test_img = test_img.to(device)
-        out = model_ft(test_img)
-        out = out.detach().cpu().numpy()
-        out_v = out[0][0] * stdVal + meanVal
-        # print(out_v)
-        result.append(out_v)
+    ### 逆归一化，输出 test 的‘预测的结果’ ###
+    # test_img_path = loadCol(os.path.join(infile, 'test.txt'), 0)
+    # test_lab = loadCol(os.path.join(infile, 'test.txt'), 1)
+    # _, meanVal, stdVal = Normalize(test_lab)
+    #
+    # model_ft.eval()
+    # torch.no_grad()
+    # result = []
+    # transform = transforms.Compose([
+    #     transforms.Resize(input_size),
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                          std=[0.229, 0.224, 0.225])
+    # ])
+    # for i in range(len(test_img_path)):
+    #     test_img = Image.open(os.path.join(infile, test_img_path[i])).convert('RGB')
+    #     test_img = transform(test_img).unsqueeze(0)
+    #     test_img = test_img.to(device)
+    #     out = model_ft(test_img)
+    #     out = out.detach().cpu().numpy()
+    #     out_v = out[0][0] * stdVal + meanVal
+    #     # print(out_v)
+    #     result.append(out_v)
 
     # 绘制期望和预测的结果
     plt.figure()
