@@ -62,10 +62,10 @@ parser.add_argument('--data_dir', metavar='DIR', default='../ECC',
                     help='path to dataset')
 parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet"')
-parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('--epochs', type=int, default=1, metavar='N',
-                    help='number of epochs to train (default: 1)')
+parser.add_argument('-ep', '--epochs', type=int, default=3, metavar='N',
+                    help='number of epochs to train (default: )')
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
@@ -207,9 +207,9 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     input_size = 0
 
     if model_name == "resnet":
-        """ Resnet18
+        """ Resnet
         """
-        model_ft = models.resnet34(pretrained=use_pretrained)
+        model_ft = models.resnet50(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
@@ -329,6 +329,8 @@ class customData(Dataset):
     def __init__(self, img_path, txt_path, dataset = '', data_transforms=None, loader = default_loader):
         with open(txt_path) as input_file:
             lines = input_file.readlines()
+            self.img_name = []
+            self.img_label = []
             # self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
             # self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
             for line in lines:
@@ -479,7 +481,8 @@ if __name__ == '__main__':
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                  batch_size=batch_size,
                                                  shuffle=False,
-                                                 num_workers=1) for x in ['train', 'val']}  # 这里的shuffle可以打乱数据顺序！！！
+                                                 # num_workers=1
+                                                       ) for x in ['train', 'val']}  # 这里的shuffle可以打乱数据顺序！！！
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -596,8 +599,11 @@ if __name__ == '__main__':
     plt.legend()
     plt.savefig(os.path.join('./output/', ('Hist of ' + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + '.png')))
     plt.show()
-    np.savetxt("./output/train_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
-    np.savetxt("./output/val_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), val_hist)
+    # output txt
+    hist = np.vstack((train_hist, val_hist))
+    np.savetxt("./output/Hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), hist.T)
+    # np.savetxt("./output/train_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), train_hist)
+    # np.savetxt("./output/val_hist of " + fn + "_" + str(model_name) + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), val_hist)
 
     #######################################################################
     # -----------------------Evaluation--------------------------------
@@ -641,7 +647,8 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     # 输出预测的结果到txt文件
-    np.savetxt('./output/' + 'Result of ' + fn +"_" + model_name +"_"+ str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), result, fmt='%s')
+    res = np.vstack((test_lab, result))
+    np.savetxt('./output/' + 'Results of ' + fn +"_" + model_name +"_"+ str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), res.T, fmt='%s')
 
     ### 分析'每层误差信息' ###
     result = np.array(result)
