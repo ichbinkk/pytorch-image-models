@@ -209,7 +209,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     if model_name == "resnet":
         """ Resnet
         """
-        model_ft = models.resnet50(pretrained=use_pretrained)
+        model_ft = models.resnet101(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
@@ -336,7 +336,7 @@ class customData(Dataset):
             for line in lines:
                 img_name = line.strip().split('\t')[0]
                 img_prefix = img_name.split('-')[0]
-                if img_prefix in ['A1','B1','C1','D1','E1']:
+                if img_prefix in ['A2','B1','C2','D2','E1']:
                     self.img_name.append(os.path.join(img_path,img_name))
                     self.img_label.append(float(line.strip().split('\t')[1]))
         # 对y做归一化
