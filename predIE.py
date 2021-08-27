@@ -43,11 +43,6 @@ num_classes = 1
 
 lr = 0.001
 
-# Flag for feature extracting. When False, we finetune the whole model,
-#   when True we only update the reshaped layer params
-# feature_extract = True
-feature_extract = False
-
 parm = {}  # 初始化保存模块参数的parm字典
 
 # Set argparse
@@ -63,11 +58,19 @@ alexnet, vgg, squeezenet, densenet, inception]
 '''
 parser.add_argument('--model', default='resnet', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet"')
-parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=1, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=2, metavar='N',
                     help='number of epochs to train (default: )')
+parser.add_argument('-ft', '--use-pretrained', type=bool, default=True, metavar='N',
+                    help='Flag to use fine tuneing(default: False)')
+parser.add_argument('-fe', '--feature-extract', type=bool, default=True, metavar='N',
+                    help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 
+# set train and val data prefixs
+# prefixs = ['A1','A2','B1','B2','C1','C2','D1','D2','E1','E2']
+prefixs = ['A1','A2','B1','B2','C1','C2', 'D2']
+# prefixs = ['A1','B1','C2', 'D2', 'E1']
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
     since = time.time()
@@ -282,6 +285,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
 
     elif model_name == "pit":
         """ pit
+        pit_xs_224, pit_s_224
         """
         model_ft = tm.pit_xs_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
@@ -394,7 +398,8 @@ class customData(Dataset):
             for line in lines:
                 img_name = line.strip().split('\t')[0]
                 img_prefix = img_name.split('-')[0]
-                if img_prefix in ['A2','B1','C2','D2','E1']:   # 指定训练数据位置
+                # if img_prefix is not None:
+                if img_prefix in prefixs:   # 指定训练数据位置
                     self.img_name.append(os.path.join(img_path,img_name))
                     self.img_label.append(float(line.strip().split('\t')[1]))
         # 对y做归一化
@@ -426,7 +431,7 @@ class customData(Dataset):
                 print("Cannot transform image: {}".format(img_name))
         return img, label
 
-### 读取数据文本的第k列 ###
+### 读取文本的第k列数值data ###
 def loadCol(infile, k):
     f = open(infile, 'r')
     sourceInLine = f.readlines()
@@ -442,7 +447,21 @@ def loadCol(infile, k):
     if dataset[0].split('.')[-1] != 'png':
         dataset = [float(s) for s in dataset]
     return dataset
-
+### 读取文本的第k列字符串data ###
+def loadColStr(infile, k):
+    f = open(infile, 'r')
+    sourceInLine = f.readlines()
+    dataset = []
+    for line in sourceInLine:
+        temp1 = line.strip('\n')
+        temp2 = temp1.split('\t')
+        if temp2[0].split('-')[0] in prefixs:
+            dataset.append(float(temp2[k]))
+    # for i in range(0, len(dataset)):
+    #     for j in range(k):
+    #         #dataset[i].append(float(dataset[i][j]))
+    #         dataset[i][j] = float(dataset[i][j])
+    return dataset
 def Normalize(data):
     # res = []
     data = np.array(data)
@@ -462,15 +481,20 @@ def InvNormalize(data, meanVal, stdVal):
 if __name__ == '__main__':
     print("PyTorch Version: ", torch.__version__)
     print("Torchvision Version: ", torchvision.__version__)
+    # get all args params
     args = parser.parse_args()
     infile = args.data_dir
     model_name = args.model
     batch_size = args.batch_size
     num_epochs = args.epochs
+    use_pretrained = args.use_pretrained
+    feature_extract = args.feature_extract
 
+    # get data Dir name
     fn = infile.split('/')[-1]
+
     # Initialize the model for this run
-    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=False)
+    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained)
 
     # output path
     out_path = './output'
@@ -670,7 +694,7 @@ if __name__ == '__main__':
     #######################################################################
     # -----------------------Evaluation--------------------------------
     ### 逆归一化，输出 val 的‘预测的结果’ ###
-    test_lab = loadCol(os.path.join(infile, 'val.txt'), 1)[591:]
+    test_lab = loadColStr(os.path.join(infile, 'val.txt'), 1)
     _, meanVal, stdVal = Normalize(test_lab)
     result = InvNormalize(result, meanVal, stdVal)
 
@@ -733,7 +757,6 @@ if __name__ == '__main__':
     E2 = np.sum(result)
     Er = (E1-E2)/E2
     print('Actual total EC: {:.2f}J, Predicted total EC: {:.2f}J, Er: {:.2%}'.format(E1,E2,Er))
-
 
     res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er, Rs, Mae, R2_s]
     np.savetxt('./output/' + 'Error of ' + fn + "_" + model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size),
