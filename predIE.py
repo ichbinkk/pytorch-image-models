@@ -147,8 +147,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             if phase == 'val':
                 val_acc_history.append(epoch_loss)
                 if epoch_loss < min_loss:
+                    min_loss = epoch_loss  # update min_loss
+                    print('Best val min_loss: {:4f} in Epoch {}/{}'.format(min_loss, epoch, num_epochs - 1))
                     best_model_wts = copy.deepcopy(model.state_dict())
-
 
             # 删掉acc 因为回归问题不存在acc
             # epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -180,6 +181,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     # load best model weights
     model.load_state_dict(best_model_wts)
+    # save best model weights
+    save_path = './output/' + time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()) + '.pth'
+    torch.save(best_model_wts, save_path)
     return model, train_acc_history, val_acc_history, result
 
 
@@ -298,7 +302,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     elif model_name == "mixer":
         """ mixer
         """
-        model_ft = tm. mixer_b16_224(pretrained=use_pretrained)
+        model_ft = tm.mixer_b16_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.head.in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
@@ -306,8 +310,9 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
 
     elif model_name == "swin-vit":
         """ swin-vit
+        tm.swin_tiny_patch4_window7_224, tm.swin_small_patch4_window7_224
         """
-        model_ft = tm. swin_tiny_patch4_window7_224(pretrained=use_pretrained)
+        model_ft = tm.swin_small_patch4_window7_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.head.in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
@@ -467,6 +472,11 @@ if __name__ == '__main__':
     # Initialize the model for this run
     model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=False)
 
+    # output path
+    out_path = './output'
+    if not os.path.exists(out_path):
+        # 如果不存在则创建目录
+        os.makedirs(out_path)
     # Print the model we just instantiated
     # print(model_ft)
 
@@ -641,12 +651,6 @@ if __name__ == '__main__':
     # shist = scratch_hist
 
     # 绘制训练和验证的损失曲线
-    # output path
-    out_path = './output'
-    if not os.path.exists(out_path):
-        # 如果不存在则创建目录
-        os.makedirs(out_path)
-
     plt.figure()
     plt.title("Train and val Loss history vs. Number of Training Epochs")
     plt.xlabel("Training Epochs")
