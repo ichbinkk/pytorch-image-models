@@ -89,7 +89,27 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
     #     model_ft.fc = nn.Linear(num_ftrs, num_classes)
     #     input_size = 224
 
-    elif model_name == "regnet":
+    elif model_name == "regnety_040":
+        """ regnet
+            regnety_040， regnety_080， regnety_160
+        """
+        model_ft = tm.regnety_040(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "regnety_080":
+        """ regnet
+            regnety_040， regnety_080， regnety_160
+        """
+        model_ft = tm.regnety_040(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "regnety_160":
         """ regnet
             regnety_040， regnety_080， regnety_160
         """
@@ -129,7 +149,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
         input_size = 320
 
-    elif model_name == "vit":
+    elif model_name == "vit_t":
         """ vit
         """
         model_ft = tm.vit_tiny_patch16_224(pretrained=use_pretrained)
@@ -138,9 +158,9 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "pit":
+    elif model_name == "pit_xs_224":
         """ pit
-        pit_xs_224, pit_s_224
+        pit_xs_224
         """
         model_ft = tm.pit_xs_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
@@ -148,9 +168,29 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "deit":
+    elif model_name == "pit_s_224":
+        """ pit
+        pit_s_224
+        """
+        model_ft = tm.pit_xs_224(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.get_classifier().in_features
+        model_ft.head = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "deit_small_patch16_224":
         """ deit
-            deit_small_patch16_224, deit_base_patch16_224
+            deit_small_patch16_224
+        """
+        model_ft = tm.deit_small_patch16_224(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.head.in_features
+        model_ft.head = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "deit_base_patch16_224":
+        """ deit
+            deit_base_patch16_224
         """
         model_ft = tm.deit_small_patch16_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
@@ -167,9 +207,19 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "swin-vit":
+    elif model_name == "swin_vit_t":
         """ swin-vit
-        tm.swin_tiny_patch4_window7_224, tm.swin_small_patch4_window7_224
+        tm.swin_tiny_patch4_window7_224
+        """
+        model_ft = tm.swin_tiny_patch4_window7_224(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.head.in_features
+        model_ft.head = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "swin_vit_s":
+        """ swin-vit
+        tm.swin_small_patch4_window7_224
         """
         model_ft = tm.swin_small_patch4_window7_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
@@ -204,8 +254,8 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Fa
         model_ft.num_classes = num_classes
         input_size = 224
 
-    elif model_name == "densenet":
-        """ Densenet
+    elif model_name == "densenet121":
+        """ Densenet121
         """
         model_ft = models.densenet121(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
