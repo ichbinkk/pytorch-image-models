@@ -1,9 +1,9 @@
 """
-Finetuning Torchvision Models
+Finetuning Torchvision Models For 3D-ECP
 =============================
 
 **Author:** `ichbinkk`
-
+*date: 10/11/2021
 """
 from __future__ import print_function
 from __future__ import division
@@ -27,6 +27,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import timm.models as tm
 import argparse
+
 # 衡量误差
 from sklearn.metrics import mean_squared_error #均方误差
 from sklearn.metrics import mean_absolute_error #平方绝对误差
@@ -37,12 +38,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 # Number of classes in the dataset
 num_classes = 1
-
-# Batch size for training (change depending on how much memory you have)
-# batch_size = 64
-
-# Number of epochs to train for
-# num_epochs = 100
 
 lr = 0.001
 
@@ -182,6 +177,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     '''load best model weights'''
     model.load_state_dict(best_model_wts)
+
 
     '''save best model weights'''
     # save_path = os.path.join(out_path, time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()) + '.pth')
