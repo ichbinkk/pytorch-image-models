@@ -14,7 +14,7 @@ from ECmodels import *
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--path_img', metavar='DIR', default='./input_images/B1-48.png',
+parser.add_argument('--path_img', metavar='DIR', default='./input_images/A3-5.png',
                     help='path to dataset')
 parser.add_argument('--output_dir', metavar='DIR', default='./cam',
                     help='path to output')

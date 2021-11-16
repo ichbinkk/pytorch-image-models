@@ -54,7 +54,7 @@ Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='alexnet', type=str, metavar='MODEL',
+parser.add_argument('--model', default='deit_small_patch16_224', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
