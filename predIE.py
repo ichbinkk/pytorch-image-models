@@ -54,7 +54,7 @@ Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='deit_small_patch16_224', type=str, metavar='MODEL',
+parser.add_argument('--model', default='deit_base_patch16_224', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
@@ -483,23 +483,28 @@ if __name__ == '__main__':
     # writer.add_scalars('Validation/result', {'test_lab': test_lab, 'pred_lab': result}, ts)
     print('[Layered error]')
     error = (result - test_lab)/test_lab
-    print('Mean(error): {:.2%}.'.format(np.mean(error)))
-    print('Max(error): {:.2%}.'.format(np.max(error)))
-    print('Min(error): {:.2%}.'.format(np.min(error)))
-    print('Std(error): {:.2f}.'.format(np.std(error)))
-    # 调用误差 RMSE, Mae, R^2
+    # print('Mean(error): {:.2%}.'.format(np.mean(error)))
+    # print('Max(error): {:.2%}.'.format(np.max(error)))
+    # print('Min(error): {:.2%}.'.format(np.min(error)))
+    # print('Std(error): {:.2f}.'.format(np.std(error)))
+    print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
+        np.mean(error),np.max(error),np.min(error),np.std(error)))
+
+    '''调用误差 RMSE, Mae, R^2'''
+    print('[Statistic error]')
     Rs = mean_squared_error(test_lab, result) ** 0.5
     Mae = mean_absolute_error(test_lab, result)
     R2_s = r2_score(test_lab, result)
-    print('Root mean_squared_error: {:.2f}J, Mean_absolute_error: {:.2f}, R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
+    print('Root mean_squared_error: {:.2f}J | Mean_absolute_error: {:.2f} | R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
 
     '''total error'''
     print('[Total error]')
     E1 = np.sum(test_lab)
     E2 = np.sum(result)
     Er = (E1-E2)/E2
-    print('Actual total EC: {:.2f}J, Predicted total EC: {:.2f}J, Er: {:.2%}'.format(E1,E2,Er))
+    print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
 
+    '''save error to file'''
     res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er, Rs, Mae, R2_s]
     np.savetxt(os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)),
                np.array(res_error), fmt='%s')
