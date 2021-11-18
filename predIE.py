@@ -54,7 +54,7 @@ Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='resnet101', type=str, metavar='MODEL',
+parser.add_argument('--model', default='deit_base_patch16_224', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
@@ -157,8 +157,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                     print('Best val min_loss: {:4f} in Epoch {}/{}'.format(min_loss, epoch, num_epochs - 1))
                     # when find best model, save it
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    save_path = os.path.join(out_path, 'Best_checkpoint.pth')
-                    torch.save(best_model_wts, save_path)
+
 
         print()
 
@@ -172,8 +171,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     '''save final best model weights'''
     # save_path = os.path.join(out_path, time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()) + '.pth')
-    # save_path = os.path.join(out_path, 'Best_checkpoint.pth')
-    # torch.save(best_model_wts, save_path)
+    save_path = os.path.join(out_path, 'Best_checkpoint.pth')
+    torch.save(best_model_wts, save_path)
+
     return model, train_acc_history, val_acc_history, result
 
 
@@ -317,14 +317,28 @@ if __name__ == '__main__':
     # Print the model we just instantiated
     # print(model_ft)
 
-    ### Print computational params ###
-    # from torchstat import stat
-    # stat(model_ft, (3, 224, 224))
-    #
+    '''
+            Analyze flops and params
+        '''
+    if args.model in ['ecpnet', 'ecpnetno']:
+        input = (torch.rand(1, 3, 224, 224), torch.rand(1, 1, 4))
+    else:
+        input = (torch.rand(1, 3, 224, 224),)
+    '''[1] using fvcore'''
+    from fvcore.nn import FlopCountAnalysis, parameter_count_table, parameter_count
+    print(parameter_count_table(model_ft))
+
+    flops = FlopCountAnalysis(model_ft, input)
+    print("FLOPs: ", flops.total())
+
+    '''[2] using thop'''
     # from thop import profile
     # input = torch.randn(1, 3, 224, 224)
     # macs, params = profile(model_ft, inputs=(input,))
     # print('The model Params: {:.2f}M, MACs: {:.2f}M'.format(params/10e6, macs/10e6))
+    '''[3] using torchstat'''
+    # from torchstat import stat
+    # stat(model_ft, (3, 224, 224))
 
     ######################################################################
     # Load Data
