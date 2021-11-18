@@ -54,7 +54,7 @@ Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='deit_base_patch16_224', type=str, metavar='MODEL',
+parser.add_argument('--model', default='resnet101', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
@@ -155,21 +155,12 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 if epoch_loss < min_loss:
                     min_loss = epoch_loss  # update min_loss
                     print('Best val min_loss: {:4f} in Epoch {}/{}'.format(min_loss, epoch, num_epochs - 1))
+                    # when find best model, save it
                     best_model_wts = copy.deepcopy(model.state_dict())
                     save_path = os.path.join(out_path, 'Best_checkpoint.pth')
                     torch.save(best_model_wts, save_path)
 
         print()
-        # 制定训练序号的同时 保存模块参数（卷积核权重）
-    #     if epoch % 19 == 0:
-    #         for name, parameters in model.named_parameters():
-    #             # print(name, ':', parameters.size())
-    #             parm[name] = parameters.detach().cpu().numpy()
-    #         print(parm['layer1.0.conv1.weight'][0, 0, :, :])
-    #         # kernal = (kernal, parm['layer1.0.conv1.weight'][0, 0, :, :])
-    #         kernal = np.append(kernal, parm['layer1.0.conv1.weight'][0, 0, :, :], axis=0)
-    #
-    # np.savetxt("Parm.txt", kernal)
 
     time_elapsed = time.time() - since
     print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -179,7 +170,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     model.load_state_dict(best_model_wts)
 
 
-    '''save best model weights'''
+    '''save final best model weights'''
     # save_path = os.path.join(out_path, time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()) + '.pth')
     # save_path = os.path.join(out_path, 'Best_checkpoint.pth')
     # torch.save(best_model_wts, save_path)
@@ -501,7 +492,7 @@ if __name__ == '__main__':
     print('[Total error]')
     E1 = np.sum(test_lab)
     E2 = np.sum(result)
-    Er = (E1-E2)/E2
+    Er = np.abs((E1-E2)/E2)
     print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
 
     '''save error to file'''
