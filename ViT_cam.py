@@ -24,7 +24,7 @@ def get_args():
     # Dataset / Model parameters
     parser.add_argument('--output_dir', metavar='DIR', default='./cam',
                         help='path to output')
-    parser.add_argument('--model', default='efficientnet_b3', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='pit_xs_224', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
     parser.add_argument('--pth_dir', metavar='DIR', default='./output/lattice_ec',
                         help='path to pth file')
@@ -34,7 +34,7 @@ def get_args():
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./input_images/B1-48.png',
+        default='./input_images/A3-12.png',
         help='Input image path')
     parser.add_argument('--aug_smooth', action='store_true',
                         help='Apply test time augmentation to smooth the CAM')
@@ -59,8 +59,18 @@ def get_args():
 
     return args
 
+# for ViT-t
+# def reshape_transform(tensor, height=14, width=14):
+#     result = tensor[:, 1:, :].reshape(tensor.size(0),
+#                                       height, width, tensor.size(2))
+#
+#     # Bring the channels to the first dimension,
+#     # like in CNNs.
+#     result = result.transpose(2, 3).transpose(1, 2)
+#     return result
 
-def reshape_transform(tensor, height=14, width=14):
+# for PiT
+def reshape_transform(tensor, height=7, width=7):
     result = tensor[:, 1:, :].reshape(tensor.size(0),
                                       height, width, tensor.size(2))
 
@@ -69,6 +79,15 @@ def reshape_transform(tensor, height=14, width=14):
     result = result.transpose(2, 3).transpose(1, 2)
     return result
 
+# for Swin-T
+# def reshape_transform(tensor, height=7, width=7):
+#     result = tensor.reshape(tensor.size(0),
+#         height, width, tensor.size(2))
+#
+#     # Bring the channels to the first dimension,
+#     # like in CNNs.
+#     result = result.transpose(2, 3).transpose(1, 2)
+#     return result
 
 if __name__ == '__main__':
     """ python vit_gradcam.py -image-path <path_to_image>
@@ -101,7 +120,7 @@ if __name__ == '__main__':
         name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
         new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
     # load params
-    model.load_state_dict(new_state_dict)  # 从新加载这个模型。
+    model.load_state_dict(new_state_dict)  # 重新加载这个模型。
     model.eval()
 
     if args.use_cuda:
@@ -109,25 +128,35 @@ if __name__ == '__main__':
 
     print(model)
 
+
     # regist target_layers
     if args.model in ['resnet50', 'resnet152']:
         target_layers = [model.layer4[-1]]
     elif args.model in ['efficientnet_b3', 'efficientnet_b4']:
         target_layers = [model.blocks[-2][0]]
-
-    # target_layers = [model.blocks[-1].norm1]
+    elif args.model in ['vit_t']:
+        target_layers = [model.blocks[-1].norm1]
+    elif args.model in ['swin_vit_t']:
+        target_layers = [model.layers[-1].blocks[-1].norm1]
+    elif args.model in ['pit_xs_224']:
+        target_layers = [model.transformers[-1].blocks[-1].norm1]
+    elif args.model in ['ecpnet']:
+        target_layers = [model.conv_trans_12.trans_block.norm2]
 
     if args.method not in methods:
         raise Exception(f"Method {args.method} not implemented")
 
-    # cam = methods[args.method](model=model,
-    #                            target_layers=target_layers,
-    #                            use_cuda=args.use_cuda,
-    #                            reshape_transform=reshape_transform)
+    trans_net = ['swin_vit_t', 'vit_t', 'ecpnet', 'pit_xs_224']
+    if args.model in trans_net:
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda,
+                                   reshape_transform=reshape_transform)
+    else:
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda)
 
-    cam = methods[args.method](model=model,
-                               target_layers=target_layers,
-                               use_cuda=args.use_cuda)
 
     rgb_img = cv2.imread(args.image_path, 1)[:, :, ::-1]
     rgb_img = cv2.resize(rgb_img, (image_size, image_size))
@@ -156,4 +185,5 @@ if __name__ == '__main__':
     out_dir = os.path.join(args.output_dir, args.model)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    cv2.imwrite(os.path.join(out_dir, f'{args.method}_cam.jpg'), cam_image)
+    img_name = args.image_path.split('/')[-1].split('.')[0]
+    cv2.imwrite(os.path.join(out_dir, f'{img_name}_{args.method}.jpg'), cam_image)
