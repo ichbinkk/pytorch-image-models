@@ -23,6 +23,7 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset
 from PIL import Image
 import timm.models as tm
+import pandas as pd
 
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
@@ -150,15 +151,20 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         input_size = 320
 
     elif model_name == "vit_t":
-        """ vit
-        """
         model_ft = tm.vit_tiny_patch16_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.head.in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "pit_xs_224":
+    elif model_name == "vit_s":
+        model_ft = tm.vit_small_patch32_224(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.head.in_features
+        model_ft.head = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == "pit_xs":
         """ pit
         pit_xs_224
         """
@@ -168,17 +174,17 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "pit_s_224":
+    elif model_name == "pit_s":
         """ pit
         pit_s_224
         """
-        model_ft = tm.pit_xs_224(pretrained=use_pretrained)
+        model_ft = tm.pit_s_224(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.get_classifier().in_features
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "deit_small_patch16_224":
+    elif model_name == "deit_s":
         """ deit
             deit_small_patch16_224
         """
@@ -188,7 +194,7 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "deit_base_patch16_224":
+    elif model_name == "deit_b":
         """ deit
             deit_base_patch16_224
         """
@@ -236,10 +242,19 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
         input_size = 224
 
-    elif model_name == "vgg":
-        """ VGG11_bn
+    elif model_name == "vgg11":
+        """ VGG11
         """
-        model_ft = models.vgg11_bn(pretrained=use_pretrained)
+        model_ft = models.vgg11(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.classifier[6].in_features
+        model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
+        input_size = 224
+
+    elif model_name == "vgg19":
+        """ VGG19
+        """
+        model_ft = models.vgg19(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.classifier[6].in_features
         model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
@@ -282,3 +297,24 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         exit()
 
     return model_ft, input_size
+
+
+'''write to excel'''
+def save_excel(data, file):
+    writer = pd.ExcelWriter(file)  # 写入Excel文件
+    data = pd.DataFrame(data)
+    # data.to_excel(writer, sheet_name='Sheet1', float_format='%.2f', header=False, index=False)
+    data.to_excel(writer, sheet_name='Sheet1', header=False, index=False)
+    writer.save()
+    writer.close()
+
+
+'''draw txt data'''
+def draw_txt(file,k):
+    data = np.loadtxt(file, usecols=(k))
+    plt.plot(data)
+    plt.show()
+
+
+if __name__ == "__main__":
+    draw_txt('F1.txt', 1)

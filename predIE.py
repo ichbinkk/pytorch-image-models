@@ -47,18 +47,18 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/lattice_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V3_ec',
                     help='path to dataset')
 '''
 Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='deit_base_patch16_224', type=str, metavar='MODEL',
+parser.add_argument('--model', default='vgg19', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=300, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -432,7 +432,9 @@ if __name__ == '__main__':
     # plt.savefig(os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + '.png'))
     plt.show()
     hist = np.vstack((train_hist, val_hist))
-    np.savetxt(os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)), hist.T)
+    hist_path = os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
+    # np.savetxt(hist_path, hist.T)
+    save_excel(hist.T, hist_path + '.xlsx')
 
     #######################################################################
     ''' Plot Evaluation result'''
@@ -441,30 +443,6 @@ if __name__ == '__main__':
     _, meanVal, stdVal = Normalize(test_lab)
 
     result = InvNormalize(result, meanVal, stdVal)
-
-    ### 逆归一化，输出 test 的‘预测的结果’ ###
-    # test_img_path = loadCol(os.path.join(infile, 'test.txt'), 0)
-    # test_lab = loadCol(os.path.join(infile, 'test.txt'), 1)
-    # _, meanVal, stdVal = Normalize(test_lab)
-    #
-    # model_ft.eval()
-    # torch.no_grad()
-    # result = []
-    # transform = transforms.Compose([
-    #     transforms.Resize(input_size),
-    #     transforms.ToTensor(),
-    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                          std=[0.229, 0.224, 0.225])
-    # ])
-    # for i in range(len(test_img_path)):
-    #     test_img = Image.open(os.path.join(infile, test_img_path[i])).convert('RGB')
-    #     test_img = transform(test_img).unsqueeze(0)
-    #     test_img = test_img.to(device)
-    #     out = model_ft(test_img)
-    #     out = out.detach().cpu().numpy()
-    #     out_v = out[0][0] * stdVal + meanVal
-    #     # print(out_v)
-    #     result.append(out_v)
 
     # 绘制期望和预测的结果
     plt.figure()
@@ -479,8 +457,10 @@ if __name__ == '__main__':
     # 输出预测的结果到txt文件
     res = np.vstack((test_lab, result))
     # np.savetxt('./output/' + 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), res.T, fmt='%s')
-    np.savetxt(os.path.join(out_path,'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)), res.T, fmt='%s')
-
+    # np.savetxt(os.path.join(out_path,'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)), res.T, fmt='%s')
+    res_path = os.path.join(out_path, 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
+    # np.savetxt(res_path, res.T, fmt='%s')
+    save_excel(res.T, res_path + '.xlsx')
 
     '''layered error'''
     result = np.array(result)
@@ -510,7 +490,7 @@ if __name__ == '__main__':
     print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
 
     '''save error to file'''
-    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), E1, E2, Er, Rs, Mae, R2_s]
+    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), Rs, Mae, R2_s, E1, E2, Er]
     np.savetxt(os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)),
                np.array(res_error), fmt='%s')
 
