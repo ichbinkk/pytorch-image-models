@@ -29,9 +29,9 @@ import timm.models as tm
 import argparse
 
 # 衡量误差
-from sklearn.metrics import mean_squared_error #均方误差
-from sklearn.metrics import mean_absolute_error #平方绝对误差
-from sklearn.metrics import r2_score#R square
+from sklearn.metrics import mean_squared_error  # 均方误差
+from sklearn.metrics import mean_absolute_error  # 平方绝对误差
+from sklearn.metrics import r2_score  # R square
 
 from ECmodels import *
 from torch.utils.tensorboard import SummaryWriter
