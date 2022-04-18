@@ -24,21 +24,25 @@ from ECmodels import *
 def get_args():
     parser = argparse.ArgumentParser()
     # Dataset / Model parameters
-    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V3',
+    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V2-1',
                         help='path to output')
-    ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t '''
-    parser.add_argument('--model', default='efficientnet_b4', type=str, metavar='MODEL',
+
+    ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t deit_s vgg11 '''
+    parser.add_argument('--model', default='vgg19', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
+
     parser.add_argument('--pth_dir', metavar='DIR', default='./output/V3_ec',
                         help='path to pth file')
 
     parser.add_argument('--use-cuda', action='store_true', default=False,
                         help='Use NVIDIA GPU acceleration')
+
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./input_images/V3',
+        default='./input_images/V2-1',
         help='Input image path')
+
     parser.add_argument('--aug_smooth', action='store_true',
                         help='Apply test time augmentation to smooth the CAM')
     parser.add_argument(
@@ -96,6 +100,17 @@ def swin_reshape_transform(tensor, height=7, width=7):
     return result
 
 
+# for Deit
+def deit_reshape_transform(tensor, height=14, width=14):
+    result = tensor[:, 1:, :].reshape(tensor.size(0),
+                                      height, width, tensor.size(2))
+
+    # Bring the channels to the first dimension,
+    # like in CNNs.
+    result = result.transpose(2, 3).transpose(1, 2)
+    return result
+
+
 def image2cam(image_path, cam, outdir):
     rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
     rgb_img = cv2.resize(rgb_img, (image_size, image_size))
@@ -119,9 +134,13 @@ def image2cam(image_path, cam, outdir):
     # Here grayscale_cam has only one image in the batch
     grayscale_cam = grayscale_cam[0, :]
 
-    cam_image = show_cam_on_image(rgb_img, grayscale_cam)
+    cam_image = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=False, colormap=cv2.COLORMAP_JET)
+    # cv2.imshow('image', cam_image)
+    # cv2.waitKey(0)
 
     img_name = image_path.split('/')[-1].split('.')[0]
+    if '\\' in img_name:
+        img_name = img_name.split('\\')[-1]
     cv2.imwrite(os.path.join(out_dir, f'{img_name}_{args.method}.jpg'), cam_image)
 
 if __name__ == '__main__':
@@ -154,6 +173,7 @@ if __name__ == '__main__':
     for k, v in state_dict.items():
         name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
         new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
+
     # load params
     model.load_state_dict(new_state_dict)  # 重新加载这个模型。
     model.eval()
@@ -161,10 +181,11 @@ if __name__ == '__main__':
     if args.use_cuda:
         model = model.cuda()
 
-    # print(model)
+    print(model)
 
-
-    # regist target_layers
+    """
+        select target_layers
+    """
     if args.model in ['resnet50', 'resnet152']:
         target_layers = [model.layer4[-1]]
     elif args.model in ['efficientnet_b3', 'efficientnet_b4']:
@@ -175,12 +196,19 @@ if __name__ == '__main__':
         target_layers = [model.layers[-1].blocks[-1].norm1]
     elif args.model in ['pit_xs']:
         target_layers = [model.transformers[-1].blocks[-1].norm1]
+    elif args.model in ['deit_s']:
+        target_layers = [model.blocks[-1].norm1]
+    elif args.model in ['vgg11', 'vgg19']:
+        target_layers = [model.features[-1]]
     elif args.model in ['ecpnet']:
         target_layers = [model.conv_trans_12.trans_block.norm2]
 
     if args.method not in methods:
         raise Exception(f"Method {args.method} not implemented")
 
+    """
+        reshape and transform
+    """
     if args.model in ['vit_t', 'ecpnet']:
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
@@ -191,6 +219,11 @@ if __name__ == '__main__':
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=pit_reshape_transform)
+    elif args.model in ['deit_s']:
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda,
+                                   reshape_transform=deit_reshape_transform)
     elif args.model in ['swin_vit_t']:
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
