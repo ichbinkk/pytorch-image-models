@@ -47,18 +47,18 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V3_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
 '''
 Setting model and training params, some can use parser to get value.
 Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
 alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='deit_b', type=str, metavar='MODEL',
+parser.add_argument('--model', default='resnet18', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=50, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
