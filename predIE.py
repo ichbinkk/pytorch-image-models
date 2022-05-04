@@ -167,7 +167,7 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                 Rs = mean_squared_error(GT, result) ** 0.5
                 Mae = mean_absolute_error(GT, result)
                 R2_s = r2_score(GT, result)
-                print('LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f}.'.format(error, Rs, Mae, R2_s))
+                print('LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f}'.format(error, Rs, Mae, R2_s))
                 metrics_history[epoch][0] = Rs
 
                 E1 = np.sum(GT)
@@ -182,8 +182,8 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                 epoch_metric = Rs
                 if epoch_metric < min_metric:
                     min_metric = epoch_metric  # update min_loss
-                    print('[Best model updated] Min_metric: {:4f} in Epoch {}/{}'.format(min_metric, epoch + 1,
-                                                                                         num_epochs))
+                    print('[Best model updated] Min_metric: {:.2f} in Epoch {}/{}'.format(min_metric, epoch + 1,
+                                                                                          num_epochs))
                     best_model_wts = copy.deepcopy(model.state_dict())
                     best_epoch = epoch
                     best_result = result
@@ -191,6 +191,8 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
 
     time_elapsed = time.time() - since
     print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+
+    print('Best model with Min_metric: {:.2f} is in Epoch {}/{}'.format(min_metric, best_epoch, num_epochs))
 
     '''load best model weights'''
     model.load_state_dict(best_model_wts)
@@ -440,14 +442,22 @@ if __name__ == '__main__':
 
     criterion = nn.MSELoss()
 
-    '''使用迁移学习'''
-    # Train and evaluate
-    # return:
-    #       result -- Val result in last epoch
-    model_ft, train_hist, val_hist, result = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"))
+    '''
+        load Val Ground Truth dataset to compare in every Val epoch
+    '''
+    val_lab = loadColStr(os.path.join(infile, 'val.txt'), 1)
+    _, aVal, bVal = Normalize(val_lab)
+    # train_lab = loadColStr(os.path.join(infile, 'train.txt'), 1)
+    # _, aVal, bVal = Normalize(train_lab)
 
+    '''Train and evaluate'''
+    model_ft, train_hist, val_hist, result, metrics_history = train_model(model_ft, dataloaders_dict,
+        criterion, optimizer_ft, val_lab, aVal, bVal, num_epochs=num_epochs, is_inception=(model_name=="inception"))
 
-    '''Plot training loss'''
+    #######################################################################
+    '''
+        Plot training loss
+    '''
     plt.figure()
     plt.title("Train and val Loss history vs. Number of Training Epochs")
     plt.xlabel("Training Epochs")
@@ -465,61 +475,109 @@ if __name__ == '__main__':
     save_excel(hist.T, hist_path + '.xlsx')
 
     #######################################################################
-    ''' Plot Evaluation result'''
-    ### 逆归一化，输出 val 的‘预测的结果’ ###
-    test_lab = loadColStr(os.path.join(infile, 'val.txt'), 1)
-    _, meanVal, stdVal = Normalize(test_lab)
+    ''' 
+        Val phase
+    '''
+    # load ground truth
+    # test_lab = loadColStr(os.path.join(infile, 'val.txt'), 1)
+    # _, meanVal, stdVal = Normalize(test_lab)
+    # result = InvNormalize(result, meanVal, stdVal)
 
-    result = InvNormalize(result, meanVal, stdVal)
-
-    # 绘制期望和预测的结果
     plt.figure()
-    plt.title(model_name + "_" +str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "Validation Result")
-    ts = range(len(test_lab))
-    plt.plot(ts, test_lab, label="test_lab")
+    plt.title(model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "Validation Result")
+    ts = range(len(val_lab))
+    plt.plot(ts, val_lab, label="val_lab")
     plt.plot(ts, result, label="pred_lab")
-    # plt.xlim((0, 200))
-    # plt.ylim((0, 450000))
     plt.legend()
     plt.show()
-    # 输出预测的结果到txt文件
-    res = np.vstack((test_lab, result))
-    # np.savetxt('./output/' + 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size), res.T, fmt='%s')
-    # np.savetxt(os.path.join(out_path,'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)), res.T, fmt='%s')
+
+    res = np.vstack((val_lab, result))
     res_path = os.path.join(out_path, 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(res_path, res.T, fmt='%s')
     save_excel(res.T, res_path + '.xlsx')
 
-    '''layered error'''
+    ''' layered error '''
     result = np.array(result)
-    test_lab = np.array(test_lab)
-    # writer.add_scalars('Validation/result', {'test_lab': test_lab, 'pred_lab': result}, ts)
-    print('[Layered error]')
-    error = (result - test_lab)/test_lab
-    # print('Mean(error): {:.2%}.'.format(np.mean(error)))
-    # print('Max(error): {:.2%}.'.format(np.max(error)))
-    # print('Min(error): {:.2%}.'.format(np.min(error)))
-    # print('Std(error): {:.2f}.'.format(np.std(error)))
-    print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
-        np.mean(error),np.max(error),np.min(error),np.std(error)))
+    val_lab = np.array(val_lab)
+    RE_history = metrics_history[:, 2]
+    # writer.add_scalars('Validation/result', {'val_lab': val_lab, 'pred_lab': result}, ts)
 
-    '''调用误差 RMSE, Mae, R^2'''
-    print('[Statistic error]')
-    Rs = mean_squared_error(test_lab, result) ** 0.5
-    Mae = mean_absolute_error(test_lab, result)
-    R2_s = r2_score(test_lab, result)
-    print('Root mean_squared_error: {:.2f}J | Mean_absolute_error: {:.2f} | R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
+    error = (result - val_lab) / val_lab
+    # print()
+    # print('[Layered error]')
+    # print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
+    #     np.mean(error), np.max(error), np.min(error), np.std(error)))
+
+    '''RMSE, Mae, R^2'''
+
+    Rs = mean_squared_error(val_lab, result) ** 0.5
+    Mae = mean_absolute_error(val_lab, result)
+    R2_s = r2_score(val_lab, result)
+    # print()
+    # print('[Statistic error]')
+    # print('RMSE: {:.2f}J | MAE: {:.2f} | R2_s: {:.2f}.'.format(Rs, Mae, R2_s))
 
     '''total error'''
-    print('[Total error]')
-    E1 = np.sum(test_lab)
+    print()
+    E1 = np.sum(val_lab)
     E2 = np.sum(result)
-    Er = np.abs((E1-E2)/E2)
-    print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
+    Er = np.abs((E1 - E2) / E1)
+    # print('[Total error]')
+    # print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
+
+    '''Print final metrics'''
+    print('RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(Rs, np.mean(error), Er))
+
+    plt.figure()
+    plt.plot(range(args.epochs), RE_history, label="Er history vs. Epoch")
+    plt.legend()
+    plt.show()
+
+    metrics_path = os.path.join(out_path, 'Ms_history')
+    save_excel(metrics_history, metrics_path + '.xlsx')
 
     '''save error to file'''
     res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), Rs, Mae, R2_s, E1, E2, Er]
-    np.savetxt(os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)),
-               np.array(res_error), fmt='%s')
+    error_path = os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
+    # np.savetxt(error_path, np.array(res_error), fmt='%s')
+    save_excel(res_error, error_path + '.xlsx')
+
+    ##########################################################################
+    '''Test phase'''
+    # print("------Test using best trained model------")
+    # eval_EC(model_name, model_ft, test_path, infile, args.eval_phase)
+
+
+    # '''layered error'''
+    # result = np.array(result)
+    # test_lab = np.array(test_lab)
+    # # writer.add_scalars('Validation/result', {'test_lab': test_lab, 'pred_lab': result}, ts)
+    # print('[Layered error]')
+    # error = (result - test_lab)/test_lab
+    # # print('Mean(error): {:.2%}.'.format(np.mean(error)))
+    # # print('Max(error): {:.2%}.'.format(np.max(error)))
+    # # print('Min(error): {:.2%}.'.format(np.min(error)))
+    # # print('Std(error): {:.2f}.'.format(np.std(error)))
+    # print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
+    #     np.mean(error),np.max(error),np.min(error),np.std(error)))
+    #
+    # '''调用误差 RMSE, Mae, R^2'''
+    # print('[Statistic error]')
+    # Rs = mean_squared_error(test_lab, result) ** 0.5
+    # Mae = mean_absolute_error(test_lab, result)
+    # R2_s = r2_score(test_lab, result)
+    # print('Root mean_squared_error: {:.2f}J | Mean_absolute_error: {:.2f} | R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
+    #
+    # '''total error'''
+    # print('[Total error]')
+    # E1 = np.sum(test_lab)
+    # E2 = np.sum(result)
+    # Er = np.abs((E1-E2)/E2)
+    # print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
+    #
+    # '''save error to file'''
+    # res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), Rs, Mae, R2_s, E1, E2, Er]
+    # np.savetxt(os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)),
+    #            np.array(res_error), fmt='%s')
 
 
