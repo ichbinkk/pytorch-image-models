@@ -8,7 +8,7 @@ import json
 
 
 import argparse
-from ECmodels import *
+from ecp_utils import *
 
 # Set argparse
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')

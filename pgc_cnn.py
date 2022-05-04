@@ -21,7 +21,7 @@ from pytorch_grad_cam import GuidedBackpropReLUModel
 from pytorch_grad_cam.utils.image import show_cam_on_image, \
     deprocess_image, \
     preprocess_image
-from ECmodels import *
+from ecp_utils import *
 
 
 def get_args():

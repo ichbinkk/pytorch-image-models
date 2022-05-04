@@ -25,6 +25,15 @@ from PIL import Image
 import timm.models as tm
 import pandas as pd
 
+
+# set train and val data prefixs
+prefixs = None
+# prefixs = ['A1','A2','B1','B2','C1','C2','D1','D2','E1','E2']
+# prefixs = ['A1','A2','B1','B2','C1','C2', 'D2']
+# prefixs = ['A1','B1','C2', 'D2', 'E1']
+# prefixs = ['']
+
+
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
@@ -297,6 +306,137 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         exit()
 
     return model_ft, input_size
+
+
+# use PIL Image to read image
+def default_loader(path):
+    try:
+        img = Image.open(path)
+        return img.convert('RGB')
+    except:
+        print("Cannot read image: {}".format(path))
+
+
+# define your Dataset. Assume each line in your .txt file is [name '\t' label], for example:0001.jpg 1
+class customData(Dataset):
+    def __init__(self, img_path, txt_path, dataset = '', data_transforms=None, loader = default_loader):
+        with open(txt_path) as input_file:
+            lines = input_file.readlines()
+            self.img_name = []
+            self.img_label = []
+            # self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
+            # self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
+            for line in lines:
+                img_name = line.strip().split('\t')[0]
+                img_prefix = img_name.split('-')[0]
+                if prefixs is not None:
+                    if img_prefix in prefixs:   # 指定训练数据位置
+                        self.img_name.append(os.path.join(img_path,img_name))
+                        self.img_label.append(float(line.strip().split('\t')[1]))
+                else:
+                    self.img_name.append(os.path.join(img_path, img_name))
+                    self.img_label.append(float(line.strip().split('\t')[1]))
+        # 对y做归一化
+        ln = len(self.img_label)
+        y = self.img_label
+        y = torch.tensor(y)
+        y = y.numpy()
+        print(np.shape(y))
+        meanVal = np.mean(y)
+        stdVal = np.std(y)
+        y = (y - meanVal) / stdVal
+        self.img_label = y
+        self.data_transforms = data_transforms
+        self.dataset = dataset
+        self.loader = loader
+
+    def __len__(self):
+        return len(self.img_name)
+
+    def __getitem__(self, item):
+        img_name = self.img_name[item]
+        label = self.img_label[item]
+        img = self.loader(img_name)
+
+        if self.data_transforms is not None:
+            try:
+                img = self.data_transforms[self.dataset](img)
+            except:
+                print("Cannot transform image: {}".format(img_name))
+        return img, label
+
+
+### 读取txt文本的第k列数值data ###
+def loadCol(infile, k):
+    f = open(infile, 'r')
+    sourceInLine = f.readlines()
+    dataset = []
+    for line in sourceInLine:
+        temp1 = line.strip('\n')
+        temp2 = temp1.split('\t')
+        dataset.append(temp2[k])
+    # for i in range(0, len(dataset)):
+    #     for j in range(k):
+    #         #dataset[i].append(float(dataset[i][j]))
+    #         dataset[i][j] = float(dataset[i][j])
+    if dataset[0].split('.')[-1] != 'png':
+        dataset = [float(s) for s in dataset]
+    return dataset
+
+
+'''读取文本的第k列字符串data'''
+def loadColStr(infile, k):
+    f = open(infile, 'r')
+    sourceInLine = f.readlines()
+    dataset = []
+    for line in sourceInLine:
+        temp1 = line.strip('\n')
+        temp2 = temp1.split('\t')
+        if prefixs is not None:
+            if temp2[0].split('-')[0] in prefixs:
+                dataset.append(float(temp2[k]))
+        else:
+            dataset.append(float(temp2[k]))
+    # for i in range(0, len(dataset)):
+    #     for j in range(k):
+    #         #dataset[i].append(float(dataset[i][j]))
+    #         dataset[i][j] = float(dataset[i][j])
+    return dataset
+
+
+def Normalize(data):
+    # res = []
+    data = np.array(data)
+    meanVal = np.mean(data)
+    stdVal = np.std(data)
+    res = (data - meanVal) / stdVal
+    return res, meanVal, stdVal
+
+
+def InvNormalize(data, meanVal, stdVal):
+    # data为tensor时
+    # data = data.cpu().numpy()
+
+    # data为list时
+    data = np.array(data)
+    return (data*stdVal)+meanVal
+
+
+def seg_index(infile):
+    f = open(infile, 'r')
+    sourceInLine = f.readlines()
+    index = []
+    i = 0
+    for line in sourceInLine:
+        temp1 = line.strip('\n')
+        filepath = temp1.split('\t')[0]
+        filename = filepath.split('.')[0]
+        layer_id = filename.split('-')[-1]
+        if layer_id == '0':
+            index.append(i)
+        i += 1
+    index.append(i)
+    return index
 
 
 '''write to excel'''

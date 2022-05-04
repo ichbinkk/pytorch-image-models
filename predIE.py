@@ -33,7 +33,7 @@ from sklearn.metrics import mean_squared_error  # 均方误差
 from sklearn.metrics import mean_absolute_error  # 平方绝对误差
 from sklearn.metrics import r2_score  # R square
 
-from ECmodels import *
+from ecp_utils import *
 from torch.utils.tensorboard import SummaryWriter
 
 # Number of classes in the dataset
@@ -50,38 +50,34 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
 '''
-Setting model and training params, some can use parser to get value.
-Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
-alexnet, vgg, squeezenet, densenet, inception]
+    Setting model and training params, some can use parser to get value.
+    Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
+    alexnet, vgg, squeezenet, densenet, inception]
 '''
 parser.add_argument('--model', default='resnet18', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
 parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metavar='N',
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 
-# set train and val data prefixs
-prefixs = None
-# prefixs = ['A1','A2','B1','B2','C1','C2','D1','D2','E1','E2']
-# prefixs = ['A1','A2','B1','B2','C1','C2', 'D2']
-# prefixs = ['A1','B1','C2', 'D2', 'E1']
-
 
 def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_epochs=25, is_inception=False):
     since = time.time()
 
     # log loss history
+    train_loss, val_loss = 0, 0
     train_acc_history = []
     val_acc_history = []
 
     # log result
     last_result = []
     best_result = []
+    layer_error = []
 
     # log metrics
     metrics_history = np.zeros([num_epochs, 3])
@@ -93,9 +89,12 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
     min_loss = 999999
     min_metric = 999999
 
+    # seg_index
+    index = seg_index(os.path.join(infile, 'val.txt'))
+
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
+        # print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        # print('-' * 10)
 
         result = []
 
@@ -150,31 +149,46 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                 After training or val one epoch completed
             '''
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+            # print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+
             if phase == 'train':
+                train_loss = epoch_loss
                 train_acc_history.append(epoch_loss)
             if phase == 'val':
                 if epoch == num_epochs - 1:
                     last_result = result
                 val_acc_history.append(epoch_loss)
+                val_loss = epoch_loss
 
                 # get every epoch error
                 result = InvNormalize(result, aVal, bVal)
 
-                error = np.mean((result - GT) / GT)
-                metrics_history[epoch][1] = error
-
+                '''layer-wise metric'''
                 Rs = mean_squared_error(GT, result) ** 0.5
                 Mae = mean_absolute_error(GT, result)
                 R2_s = r2_score(GT, result)
-                print('LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f}'.format(error, Rs, Mae, R2_s))
                 metrics_history[epoch][0] = Rs
 
-                E1 = np.sum(GT)
-                E2 = np.sum(result)
-                Er = np.abs((E1 - E2) / E1)
-                print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
+                error = (result - GT) / GT
+                metrics_history[epoch][1] = np.mean(error)
+
+                '''model-wise metric'''
+                Er = np.zeros([len(index)-1, 1])
+                for i in range(len(index)-1):
+                    t1 = GT[index[i]:index[i+1]]
+                    t2 = result[index[i]:index[i+1]]
+                    E1 = np.sum(GT[index[i]:index[i+1]])
+                    E2 = np.sum(result[index[i]:index[i+1]])
+                    Er[i] = 1 - np.abs((E1 - E2) / E1)
+                Er = np.mean(Er)
                 metrics_history[epoch][2] = Er
+                'Epoch {}/{}'.format(epoch, num_epochs - 1)
+
+                '''print metrics for each epoch'''
+                print('[Epoch {}/{}] Train_loss: {:.4f} | Val_loss: {:.4f} | LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f} | Er: {:.2%}'.format(epoch+1,
+                      num_epochs, train_loss, val_loss, np.mean(error), Rs, Mae, R2_s, Er))
+                # print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
+
 
                 """ 
                     Choose the best model using various metrics
@@ -182,17 +196,18 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                 epoch_metric = Rs
                 if epoch_metric < min_metric:
                     min_metric = epoch_metric  # update min_loss
-                    print('[Best model updated] Min_metric: {:.2f} in Epoch {}/{}'.format(min_metric, epoch + 1,
-                                                                                          num_epochs))
+                    # print('[Best model updated] Min_metric: {:.2f} in Epoch {}/{}'.format(min_metric, epoch + 1,
+                    #                                                                       num_epochs))
                     best_model_wts = copy.deepcopy(model.state_dict())
                     best_epoch = epoch
                     best_result = result
-        print()
+                    layer_error = error
+        # print()
 
     time_elapsed = time.time() - since
     print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 
-    print('Best model with Min_metric: {:.2f} is in Epoch {}/{}'.format(min_metric, best_epoch, num_epochs))
+    print('Best model with Min_metric: {:.2f} is in Epoch {}/{}'.format(min_metric, best_epoch+1, num_epochs))
 
     '''load best model weights'''
     model.load_state_dict(best_model_wts)
@@ -203,120 +218,7 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
     save_path = os.path.join(out_path, 'Best_checkpoint.pth')
     torch.save(best_model_wts, save_path)
 
-    return model, train_acc_history, val_acc_history, best_result, metrics_history
-
-
-# use PIL Image to read image
-def default_loader(path):
-    try:
-        img = Image.open(path)
-        return img.convert('RGB')
-    except:
-        print("Cannot read image: {}".format(path))
-
-# define your Dataset. Assume each line in your .txt file is [name '\t' label], for example:0001.jpg 1
-class customData(Dataset):
-    def __init__(self, img_path, txt_path, dataset = '', data_transforms=None, loader = default_loader):
-        with open(txt_path) as input_file:
-            lines = input_file.readlines()
-            self.img_name = []
-            self.img_label = []
-            # self.img_name = [os.path.join(img_path, line.strip().split('\t')[0]) for line in lines]
-            # self.img_label = [float(line.strip().split('\t')[1]) for line in lines]
-            for line in lines:
-                img_name = line.strip().split('\t')[0]
-                img_prefix = img_name.split('-')[0]
-                if prefixs is not None:
-                    if img_prefix in prefixs:   # 指定训练数据位置
-                        self.img_name.append(os.path.join(img_path,img_name))
-                        self.img_label.append(float(line.strip().split('\t')[1]))
-                else:
-                    self.img_name.append(os.path.join(img_path, img_name))
-                    self.img_label.append(float(line.strip().split('\t')[1]))
-        # 对y做归一化
-        ln = len(self.img_label)
-        y = self.img_label
-        y = torch.tensor(y)
-        y = y.numpy()
-        print(np.shape(y))
-        meanVal = np.mean(y)
-        stdVal = np.std(y)
-        y = (y - meanVal) / stdVal
-        self.img_label = y
-        self.data_transforms = data_transforms
-        self.dataset = dataset
-        self.loader = loader
-
-    def __len__(self):
-        return len(self.img_name)
-
-    def __getitem__(self, item):
-        img_name = self.img_name[item]
-        label = self.img_label[item]
-        img = self.loader(img_name)
-
-        if self.data_transforms is not None:
-            try:
-                img = self.data_transforms[self.dataset](img)
-            except:
-                print("Cannot transform image: {}".format(img_name))
-        return img, label
-
-
-### 读取txt文本的第k列数值data ###
-def loadCol(infile, k):
-    f = open(infile, 'r')
-    sourceInLine = f.readlines()
-    dataset = []
-    for line in sourceInLine:
-        temp1 = line.strip('\n')
-        temp2 = temp1.split('\t')
-        dataset.append(temp2[k])
-    # for i in range(0, len(dataset)):
-    #     for j in range(k):
-    #         #dataset[i].append(float(dataset[i][j]))
-    #         dataset[i][j] = float(dataset[i][j])
-    if dataset[0].split('.')[-1] != 'png':
-        dataset = [float(s) for s in dataset]
-    return dataset
-
-
-'''读取文本的第k列字符串data'''
-def loadColStr(infile, k):
-    f = open(infile, 'r')
-    sourceInLine = f.readlines()
-    dataset = []
-    for line in sourceInLine:
-        temp1 = line.strip('\n')
-        temp2 = temp1.split('\t')
-        if prefixs is not None:
-            if temp2[0].split('-')[0] in prefixs:
-                dataset.append(float(temp2[k]))
-        else:
-            dataset.append(float(temp2[k]))
-    # for i in range(0, len(dataset)):
-    #     for j in range(k):
-    #         #dataset[i].append(float(dataset[i][j]))
-    #         dataset[i][j] = float(dataset[i][j])
-    return dataset
-
-
-def Normalize(data):
-    # res = []
-    data = np.array(data)
-    meanVal = np.mean(data)
-    stdVal = np.std(data)
-    res = (data - meanVal) / stdVal
-    return res, meanVal, stdVal
-
-
-def InvNormalize(data, meanVal, stdVal):
-    # data为tensor时
-    # data = data.cpu().numpy()
-
-    # data为list时
-    data = np.array(data)
-    return (data*stdVal)+meanVal
+    return model, train_acc_history, val_acc_history, best_epoch, best_result, layer_error, metrics_history
 
 
 if __name__ == '__main__':
@@ -373,14 +275,6 @@ if __name__ == '__main__':
     ######################################################################
     # Load Data
     # ---------
-    #
-    # Now that we know what the input size must be, we can initialize the data
-    # transforms, image datasets, and the dataloaders. Notice, the models were
-    # pretrained with the hard-coded normalization values, as described
-    # `here <https://pytorch.org/docs/master/torchvision/models.html>`__.
-    #
-
-    # Data augmentation and normalization for training
     # Just normalization for validation
     data_transforms = {
         'train': transforms.Compose([
@@ -451,7 +345,7 @@ if __name__ == '__main__':
     # _, aVal, bVal = Normalize(train_lab)
 
     '''Train and evaluate'''
-    model_ft, train_hist, val_hist, result, metrics_history = train_model(model_ft, dataloaders_dict,
+    model_ft, train_hist, val_hist, best_epoch, result, layer_error, metrics_history = train_model(model_ft, dataloaders_dict,
         criterion, optimizer_ft, val_lab, aVal, bVal, num_epochs=num_epochs, is_inception=(model_name=="inception"))
 
     #######################################################################
@@ -478,11 +372,8 @@ if __name__ == '__main__':
     ''' 
         Val phase
     '''
-    # load ground truth
-    # test_lab = loadColStr(os.path.join(infile, 'val.txt'), 1)
-    # _, meanVal, stdVal = Normalize(test_lab)
-    # result = InvNormalize(result, meanVal, stdVal)
 
+    ''' layered EC result '''
     plt.figure()
     plt.title(model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "Validation Result")
     ts = range(len(val_lab))
@@ -497,18 +388,12 @@ if __name__ == '__main__':
     save_excel(res.T, res_path + '.xlsx')
 
     ''' layered error '''
-    result = np.array(result)
-    val_lab = np.array(val_lab)
-    RE_history = metrics_history[:, 2]
     # writer.add_scalars('Validation/result', {'val_lab': val_lab, 'pred_lab': result}, ts)
 
-    error = (result - val_lab) / val_lab
     # print()
     # print('[Layered error]')
     # print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
     #     np.mean(error), np.max(error), np.min(error), np.std(error)))
-
-    '''RMSE, Mae, R^2'''
 
     Rs = mean_squared_error(val_lab, result) ** 0.5
     Mae = mean_absolute_error(val_lab, result)
@@ -518,26 +403,22 @@ if __name__ == '__main__':
     # print('RMSE: {:.2f}J | MAE: {:.2f} | R2_s: {:.2f}.'.format(Rs, Mae, R2_s))
 
     '''total error'''
-    print()
-    E1 = np.sum(val_lab)
-    E2 = np.sum(result)
-    Er = np.abs((E1 - E2) / E1)
-    # print('[Total error]')
-    # print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
+    Er = metrics_history[best_epoch, 2]
 
-    '''Print final metrics'''
-    print('RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(Rs, np.mean(error), Er))
+    '''Print Best metrics'''
+    print('RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(Rs, np.mean(layer_error), Er))
 
+    RE_history = metrics_history[:, 2]
     plt.figure()
-    plt.plot(range(args.epochs), RE_history, label="Er history vs. Epoch")
+    plt.plot(range(args.epochs), RE_history, label="Model-wise accuracy history vs. Epoch")
     plt.legend()
     plt.show()
 
-    metrics_path = os.path.join(out_path, 'Ms_history')
-    save_excel(metrics_history, metrics_path + '.xlsx')
+    metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
+    save_excel(metrics_history, metrics_path)
 
     '''save error to file'''
-    res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), Rs, Mae, R2_s, E1, E2, Er]
+    res_error = [np.mean(layer_error), np.max(layer_error), np.min(layer_error), np.std(layer_error), Rs, Mae, R2_s, Er]
     error_path = os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(error_path, np.array(res_error), fmt='%s')
     save_excel(res_error, error_path + '.xlsx')
@@ -546,38 +427,3 @@ if __name__ == '__main__':
     '''Test phase'''
     # print("------Test using best trained model------")
     # eval_EC(model_name, model_ft, test_path, infile, args.eval_phase)
-
-
-    # '''layered error'''
-    # result = np.array(result)
-    # test_lab = np.array(test_lab)
-    # # writer.add_scalars('Validation/result', {'test_lab': test_lab, 'pred_lab': result}, ts)
-    # print('[Layered error]')
-    # error = (result - test_lab)/test_lab
-    # # print('Mean(error): {:.2%}.'.format(np.mean(error)))
-    # # print('Max(error): {:.2%}.'.format(np.max(error)))
-    # # print('Min(error): {:.2%}.'.format(np.min(error)))
-    # # print('Std(error): {:.2f}.'.format(np.std(error)))
-    # print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
-    #     np.mean(error),np.max(error),np.min(error),np.std(error)))
-    #
-    # '''调用误差 RMSE, Mae, R^2'''
-    # print('[Statistic error]')
-    # Rs = mean_squared_error(test_lab, result) ** 0.5
-    # Mae = mean_absolute_error(test_lab, result)
-    # R2_s = r2_score(test_lab, result)
-    # print('Root mean_squared_error: {:.2f}J | Mean_absolute_error: {:.2f} | R2_score: {:.2f}.'.format(Rs, Mae, R2_s))
-    #
-    # '''total error'''
-    # print('[Total error]')
-    # E1 = np.sum(test_lab)
-    # E2 = np.sum(result)
-    # Er = np.abs((E1-E2)/E2)
-    # print('Actual EC: {:.2f}J | Predicted EC: {:.2f}J | Er: {:.2%}'.format(E1,E2,Er))
-    #
-    # '''save error to file'''
-    # res_error = [np.mean(error), np.max(error), np.min(error), np.std(error), Rs, Mae, R2_s, E1, E2, Er]
-    # np.savetxt(os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size)),
-    #            np.array(res_error), fmt='%s')
-
-
