@@ -54,7 +54,7 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='resnet18', type=str, metavar='MODEL',
+parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 32)')
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     if not os.path.exists(out_path):
         # 如果不存在则创建目录
         os.makedirs(out_path)
-    writer = SummaryWriter(out_path)
+    # writer = SummaryWriter(out_path)
 
     # Print the model we just instantiated
     # print(model_ft)
