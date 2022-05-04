@@ -72,21 +72,32 @@ prefixs = None
 # prefixs = ['A1','B1','C2', 'D2', 'E1']
 
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_epochs=25, is_inception=False):
     since = time.time()
 
+    # log loss history
     train_acc_history = []
     val_acc_history = []
-    result = []
 
-    kernal = np.empty((0, 3))
+    # log result
+    last_result = []
+    best_result = []
+
+    # log metrics
+    metrics_history = np.zeros([num_epochs, 3])
 
     best_model_wts = copy.deepcopy(model.state_dict())
+
+    # for record min/max value
+    best_epoch = 0
     min_loss = 999999
+    min_metric = 999999
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
+
+        result = []
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -96,19 +107,19 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 model.eval()   # Set model to evaluate mode
 
             running_loss = 0.0
-            running_corrects = 0
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
+                '''
+                    Forward
+                    track history if only in train
+                '''
                 with torch.set_grad_enabled(phase == 'train'):
                     if is_inception and phase == 'train':
                         # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
@@ -122,60 +133,75 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                         outputs = outputs.view(-1)
                         loss = criterion(outputs, labels)
 
-                        '''save val result in last epoch'''
-                        if phase == 'val' and epoch == num_epochs-1:
+                        '''save val result'''
+                        if phase == 'val':
                             # result.append(outputs)
                             temp = outputs.detach().cpu().numpy()
                             for i in range(outputs.size()[0]):
                                 result.append(temp[i])
-
-                    # _, preds = torch.max(outputs, 1)
-
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
-                # running_corrects += torch.sum(preds == labels.data)
 
+            '''
+                After training or val one epoch completed
+            '''
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
             if phase == 'train':
                 train_acc_history.append(epoch_loss)
-                ## log
-                writer.add_scalar('Training/Loss', epoch_loss, epoch)
-                # writer.add_scalar('Training/precision', precision, epoch)
-                writer.add_scalar('Training/learn_rate', optimizer.param_groups[0]['lr'], epoch)
             if phase == 'val':
+                if epoch == num_epochs - 1:
+                    last_result = result
                 val_acc_history.append(epoch_loss)
-                ## log
-                writer.add_scalar('Validation/Loss', epoch_loss, epoch)
-                if epoch_loss < min_loss:
-                    min_loss = epoch_loss  # update min_loss
-                    print('Best val min_loss: {:4f} in Epoch {}/{}'.format(min_loss, epoch, num_epochs - 1))
-                    # when find best model, save it
+
+                # get every epoch error
+                result = InvNormalize(result, aVal, bVal)
+
+                error = np.mean((result - GT) / GT)
+                metrics_history[epoch][1] = error
+
+                Rs = mean_squared_error(GT, result) ** 0.5
+                Mae = mean_absolute_error(GT, result)
+                R2_s = r2_score(GT, result)
+                print('LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f}.'.format(error, Rs, Mae, R2_s))
+                metrics_history[epoch][0] = Rs
+
+                E1 = np.sum(GT)
+                E2 = np.sum(result)
+                Er = np.abs((E1 - E2) / E1)
+                print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
+                metrics_history[epoch][2] = Er
+
+                """ 
+                    Choose the best model using various metrics
+                """
+                epoch_metric = Rs
+                if epoch_metric < min_metric:
+                    min_metric = epoch_metric  # update min_loss
+                    print('[Best model updated] Min_metric: {:4f} in Epoch {}/{}'.format(min_metric, epoch + 1,
+                                                                                         num_epochs))
                     best_model_wts = copy.deepcopy(model.state_dict())
-
-
+                    best_epoch = epoch
+                    best_result = result
         print()
 
     time_elapsed = time.time() - since
     print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    # print('Best val Acc: {:4f}'.format(best_acc))
 
     '''load best model weights'''
     model.load_state_dict(best_model_wts)
 
-
-    '''save final best model weights'''
-    # save_path = os.path.join(out_path, time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()) + '.pth')
+    # Save best model weights
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
     save_path = os.path.join(out_path, 'Best_checkpoint.pth')
     torch.save(best_model_wts, save_path)
 
-    return model, train_acc_history, val_acc_history, result
-
+    return model, train_acc_history, val_acc_history, best_result, metrics_history
 
 
 # use PIL Image to read image
@@ -234,6 +260,7 @@ class customData(Dataset):
                 print("Cannot transform image: {}".format(img_name))
         return img, label
 
+
 ### 读取txt文本的第k列数值data ###
 def loadCol(infile, k):
     f = open(infile, 'r')
@@ -289,6 +316,7 @@ def InvNormalize(data, meanVal, stdVal):
     data = np.array(data)
     return (data*stdVal)+meanVal
 
+
 if __name__ == '__main__':
     print("PyTorch Version: ", torch.__version__)
     print("Torchvision Version: ", torchvision.__version__)
@@ -325,11 +353,11 @@ if __name__ == '__main__':
     else:
         input = (torch.rand(1, 3, 224, 224),)
     '''[1] using fvcore'''
-    from fvcore.nn import FlopCountAnalysis, parameter_count_table, parameter_count
-    print(parameter_count_table(model_ft))
-
-    flops = FlopCountAnalysis(model_ft, input)
-    print("FLOPs: ", flops.total())
+    # from fvcore.nn import FlopCountAnalysis, parameter_count_table, parameter_count
+    # print(parameter_count_table(model_ft))
+    #
+    # flops = FlopCountAnalysis(model_ft, input)
+    # print("FLOPs: ", flops.total())
 
     '''[2] using thop'''
     # from thop import profile
