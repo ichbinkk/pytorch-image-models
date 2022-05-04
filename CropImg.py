@@ -33,16 +33,16 @@ def crop_ec_image(in_dir, out_dir, crop_size):
 
 if __name__=="__main__":
     # [1] For ec image cropping
-    # dir_path = '../dataset/V3'
-    # out_path = '../dataset/V3_ec'
+    dir_path = '../dataset/png-V4'
+    out_path = '../dataset/V4_ec'
 
     # [2] For Cam image
-    dir_path = './cam/V3'
-    out_path = os.path.join(dir_path, 'cropped')
+    # dir_path = './cam/V3'
+    # out_path = os.path.join(dir_path, 'cropped')
 
     os.makedirs(out_path, exist_ok=True)
     if 'cam' in dir_path:
         crop_cam_image(dir_path, out_path)
     elif 'dataset' in dir_path:
-        crop_ec_image(dir_path, out_path, (10, 10, 380, 380))
+        crop_ec_image(dir_path, out_path, (80, 80, 720, 720))
 
