@@ -54,11 +54,11 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
+parser.add_argument('--model', default='mpvit_base', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=100, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -169,8 +169,9 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                 R2_s = r2_score(GT, result)
                 metrics_history[epoch][0] = Rs
 
-                error = (result - GT) / GT
-                metrics_history[epoch][1] = np.mean(error)
+                error = np.abs((result - GT) / GT)
+                LME = np.mean(error)
+                metrics_history[epoch][1] = LME
 
                 '''model-wise metric'''
                 Er = np.zeros([len(index)-1, 1])
@@ -186,14 +187,15 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
 
                 '''print metrics for each epoch'''
                 print('[Epoch {}/{}] Train_loss: {:.4f} | Val_loss: {:.4f} | LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f} | Er: {:.2%}'.format(epoch+1,
-                      num_epochs, train_loss, val_loss, np.mean(error), Rs, Mae, R2_s, Er))
+                      num_epochs, train_loss, val_loss, LME, Rs, Mae, R2_s, Er))
                 # print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
 
 
                 """ 
                     Choose the best model using various metrics
+                    [Rs, LME, Er]
                 """
-                epoch_metric = Rs
+                epoch_metric = LME
                 if epoch_metric < min_metric:
                     min_metric = epoch_metric  # update min_loss
                     # print('[Best model updated] Min_metric: {:.2f} in Epoch {}/{}'.format(min_metric, epoch + 1,
@@ -366,7 +368,6 @@ if __name__ == '__main__':
     hist = np.vstack((train_hist, val_hist))
     hist_path = os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(hist_path, hist.T)
-    save_excel(hist.T, hist_path + '.xlsx')
 
     #######################################################################
     ''' 
@@ -385,7 +386,7 @@ if __name__ == '__main__':
     res = np.vstack((val_lab, result))
     res_path = os.path.join(out_path, 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(res_path, res.T, fmt='%s')
-    save_excel(res.T, res_path + '.xlsx')
+
 
     ''' layered error '''
     # writer.add_scalars('Validation/result', {'val_lab': val_lab, 'pred_lab': result}, ts)
@@ -415,13 +416,18 @@ if __name__ == '__main__':
     plt.show()
 
     metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
-    save_excel(metrics_history, metrics_path)
 
-    '''save error to file'''
-    res_error = [np.mean(layer_error), np.max(layer_error), np.min(layer_error), np.std(layer_error), Rs, Mae, R2_s, Er]
+    '''best performance'''
+    res_error = [[model_name, np.max(layer_error), np.min(layer_error), np.std(layer_error), Mae, R2_s, Rs, np.mean(layer_error), Er]]
     error_path = os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(error_path, np.array(res_error), fmt='%s')
-    save_excel(res_error, error_path + '.xlsx')
+
+    ''' 
+       Save excel
+    '''
+    excel_path = res_path + '.xlsx'
+    save_excel(res_error, metrics_history, res.T, hist.T, excel_path)
+
 
     ##########################################################################
     '''Test phase'''

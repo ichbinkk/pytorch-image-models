@@ -19,11 +19,17 @@ import time
 import os
 import copy
 
+from timm.models import create_model
+import my_models.mpvit
+
 from torch.autograd import Variable
 from torch.utils.data import Dataset
 from PIL import Image
 import timm.models as tm
 import pandas as pd
+
+
+
 
 
 # set train and val data prefixs
@@ -40,7 +46,7 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
-def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretrained=False):
+def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretrained=False, drop=0, drop_path=0.1, drop_block=None):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -242,6 +248,74 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
+    elif model_name == "mpvit_tiny":
+        """
+        mpvit
+        """
+        model_ft = create_model(
+            "mpvit_tiny",
+            pretrained=use_pretrained,
+            num_classes=num_classes,
+            drop_rate=drop,
+            drop_path_rate=drop_path,
+            drop_block_rate=drop_block,
+        )
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # for param in model_ft.trans_cls_head.parameters():
+        #     param.requires_grad = True  # it was require_grad
+        input_size = 224
+
+    elif model_name == "mpvit_xsmall":
+        """
+        mpvit
+        """
+        model_ft = create_model(
+            "mpvit_xsmall",
+            pretrained=use_pretrained,
+            num_classes=num_classes,
+            drop_rate=drop,
+            drop_path_rate=drop_path,
+            drop_block_rate=drop_block,
+        )
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # for param in model_ft.trans_cls_head.parameters():
+        #     param.requires_grad = True  # it was require_grad
+        input_size = 224
+
+    elif model_name == "mpvit_small":
+        """
+        mpvit
+        """
+        model_ft = create_model(
+            "mpvit_small",
+            pretrained=use_pretrained,
+            num_classes=num_classes,
+            drop_rate=drop,
+            drop_path_rate=drop_path,
+            drop_block_rate=drop_block,
+        )
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # for param in model_ft.trans_cls_head.parameters():
+        #     param.requires_grad = True  # it was require_grad
+        input_size = 224
+
+    elif model_name == "mpvit_base":
+        """
+        mpvit
+        """
+        model_ft = create_model(
+            "mpvit_base",
+            pretrained=use_pretrained,
+            num_classes=num_classes,
+            drop_rate=drop,
+            drop_path_rate=drop_path,
+            drop_block_rate=drop_block,
+        )
+        set_parameter_requires_grad(model_ft, feature_extract)
+        # for param in model_ft.trans_cls_head.parameters():
+        #     param.requires_grad = True  # it was require_grad
+        input_size = 224
+
     elif model_name == "alexnet":
         """ Alexnet
         """
@@ -440,12 +514,20 @@ def seg_index(infile):
 
 
 '''write to excel'''
-def save_excel(data, file):
+def save_excel(data1, data2, data3, data4, file):
     writer = pd.ExcelWriter(file)  # 写入Excel文件
-    data = pd.DataFrame(data)
+    data1 = pd.DataFrame(data1)
+    data2 = pd.DataFrame(data2)
+    data3 = pd.DataFrame(data3)
+    data4 = pd.DataFrame(data4)
     # data.to_excel(writer, sheet_name='Sheet1', float_format='%.2f', header=False, index=False)
-    data.to_excel(writer, sheet_name='Sheet1', header=False, index=False)
-    writer.save()
+
+    data1.to_excel(writer, sheet_name='res', header=False, index=False)
+    data2.to_excel(writer, sheet_name='metrics_hist', header=False, index=False)
+    data3.to_excel(writer, sheet_name='predicted_ec', header=False, index=False)
+    data4.to_excel(writer, sheet_name='loss_hist', header=False, index=False)
+
+    # writer.save()
     writer.close()
 
 
