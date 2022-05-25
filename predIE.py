@@ -54,9 +54,9 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='dvit_base', type=str, metavar='MODEL',
+parser.add_argument('--model', default='swin_vit_s', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-ep', '--epochs', type=int, default=100, metavar='N',
                     help='number of epochs to train (default: )')
@@ -109,8 +109,11 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+                # inputs = inputs.to(device)
+                # labels = labels.to(device)
+
+                inputs = inputs.cuda()
+                labels = labels.cuda()
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -315,7 +318,7 @@ if __name__ == '__main__':
 
     # Send the model to GPU
     # model = torch.nn.DataParallel(model_ft, device_ids=device_id)
-    # model_ft = torch.nn.DataParallel(model_ft)
+    model_ft = torch.nn.DataParallel(model_ft)
     model_ft = model_ft.to(device)
 
     params_to_update = model_ft.parameters()
