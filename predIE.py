@@ -47,16 +47,16 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec_2',
                     help='path to dataset')
 '''
     Setting model and training params, some can use parser to get value.
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='swin_vit_s', type=str, metavar='MODEL',
+parser.add_argument('--model', default='dvit_base', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-ep', '--epochs', type=int, default=100, metavar='N',
                     help='number of epochs to train (default: )')
@@ -64,6 +64,8 @@ parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar
                     help='Flag to use fine tuneing(default: False)')
 parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metavar='N',
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
+parser.add_argument('--ablate', type=bool, default=False, metavar='N',
+                    help='Flag to ablate (default: False)')
 
 
 def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_epochs=25, is_inception=False):
@@ -245,7 +247,10 @@ if __name__ == '__main__':
     model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained)
 
     '''check output path for different data and models'''
-    out_path = os.path.join('./output', fn, model_name)
+    if not args.ablate:
+        out_path = os.path.join('./output', fn, model_name)
+    else:
+        out_path = os.path.join('./output', fn, 'Ablation-scale', model_name)
     if not os.path.exists(out_path):
         # 如果不存在则创建目录
         os.makedirs(out_path)

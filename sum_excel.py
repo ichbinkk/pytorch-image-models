@@ -9,29 +9,59 @@ parser = argparse.ArgumentParser(description='Sum_excel')
 parser.add_argument('--data_dir', metavar='DIR', default='./output/V4_ec',
                     help='path to excels')
 
+
+def create_matrix1(data):
+    sheet = data.worksheets[0]
+    table = list(sheet.values)
+    res = []
+    for v in table[0]:
+        res.append(v)
+    matrix1.append([res[0], res[6], res[7] * 100, res[8] * 100])
+    return res[0]
+
+
+def create_matrix2(data, model_name):
+    sheet = data.worksheets[2]
+    table = list(sheet.values)
+
+    if len(matrix2) == 0:
+        matrix2.append(['Ground Truth', model_name])
+        for line in table:
+            a = list(line)
+            matrix2.append(a)
+    else:
+        matrix2[0].append(model_name)
+        for i, line in enumerate(table):
+            a = list(line)
+            matrix2[i+1].append(a[1])
+
+
 if __name__ == "__main__":
     # get all args params
     args = parser.parse_args()
     out_file = os.path.join(args.data_dir, 'result.xlsx')
 
-    matrix = []
+    matrix1 = []
+    matrix2 = []
     for root, dirs_name, files_name in os.walk(args.data_dir):
         for i in files_name:
             if i.split('.')[-1] in ['xlsx']:
                 file_name = os.path.join(root, i)
+                # for sheet 1
                 data = openpyxl.load_workbook(file_name)
-                sheet = data.worksheets[0]
-                table = list(sheet.values)
-                res = []
-                for v in table[0]:
-                    res.append(v)
-                matrix.append([res[0], res[6], res[7]*100, res[8]*100])
-                # print(file_name)
+                model_name = create_matrix1(data)
+
+                # for sheet 2
+                create_matrix2(data, model_name)
+
 
     # matrix_t = list(map(list,zip(*matrix)))
 
     wb = openpyxl.Workbook()
-    s = wb.get_sheet_by_name('Sheet')
-    for line in matrix:
-        s.append(line)
+    s1 = wb.get_sheet_by_name('Sheet')
+    s2 = wb.create_sheet('Sheet2')
+    for line in matrix1:
+        s1.append(line)
+    for line in matrix2:
+        s2.append(line)
     wb.save(out_file)
