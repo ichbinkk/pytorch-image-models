@@ -21,6 +21,7 @@ import copy
 
 from timm.models import create_model
 import my_models.dvit
+import my_models.mpvit
 
 from torch.autograd import Variable
 from torch.utils.data import Dataset
@@ -329,6 +330,23 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         # for param in model_ft.trans_cls_head.parameters():
         #     param.requires_grad = True  # it was require_grad
         input_size = 224
+
+
+    elif model_name in ["dvit_F", "dvit_FL", "dvit_C", "dvit_CL"]:
+        """
+        dvit_tiny
+        """
+        model_ft = create_model(
+            model_name,
+            pretrained=use_pretrained,
+            num_classes=num_classes,
+            drop_rate=drop,
+            drop_path_rate=drop_path,
+            drop_block_rate=drop_block,
+        )
+        set_parameter_requires_grad(model_ft, feature_extract)
+        input_size = 224
+
 
     elif model_name == "dvit_base":
         """

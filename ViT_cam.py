@@ -24,14 +24,14 @@ from ecp_utils import *
 def get_args():
     parser = argparse.ArgumentParser()
     # Dataset / Model parameters
-    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V2-1',
+    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V4',
                         help='path to output')
 
     ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t deit_s vgg11 '''
-    parser.add_argument('--model', default='vgg19', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='pit_s', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
 
-    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V3_ec',
+    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V4_ec',
                         help='path to pth file')
 
     parser.add_argument('--use-cuda', action='store_true', default=False,
@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./input_images/V2-1',
+        default='./input_images/V4',
         help='Input image path')
 
     parser.add_argument('--aug_smooth', action='store_true',
@@ -104,9 +104,12 @@ def swin_reshape_transform(tensor, height=7, width=7):
 def deit_reshape_transform(tensor, height=14, width=14):
     result = tensor[:, 1:, :].reshape(tensor.size(0),
                                       height, width, tensor.size(2))
+    result = result.transpose(2, 3).transpose(1, 2)
+    return result
 
-    # Bring the channels to the first dimension,
-    # like in CNNs.
+def dvit_reshape_transform(tensor, height=7, width=7):
+    result = tensor[:, 1:, :].reshape(tensor.size(0),
+                                      height, width, tensor.size(2))
     result = result.transpose(2, 3).transpose(1, 2)
     return result
 
@@ -169,6 +172,9 @@ if __name__ == '__main__':
     model, image_size = initialize_model(args.model)
     pth_file = os.path.join(args.pth_dir, args.model, 'Best_checkpoint.pth')
     state_dict = torch.load(pth_file)
+
+    # model.load_state_dict(state_dict)  # 重新加载这个模型。
+
     new_state_dict = OrderedDict()
     for k, v in state_dict.items():
         name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
@@ -176,6 +182,7 @@ if __name__ == '__main__':
 
     # load params
     model.load_state_dict(new_state_dict)  # 重新加载这个模型。
+
     model.eval()
 
     if args.use_cuda:
@@ -188,51 +195,57 @@ if __name__ == '__main__':
     """
     if args.model in ['resnet50', 'resnet152']:
         target_layers = [model.layer4[-1]]
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda)
     elif args.model in ['efficientnet_b3', 'efficientnet_b4']:
         target_layers = [model.blocks[-2][0]]
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda)
     elif args.model in ['vit_t']:
         target_layers = [model.blocks[-1].norm1]
-    elif args.model in ['swin_vit_t']:
-        target_layers = [model.layers[-1].blocks[-1].norm1]
-    elif args.model in ['pit_xs']:
-        target_layers = [model.transformers[-1].blocks[-1].norm1]
-    elif args.model in ['deit_s']:
-        target_layers = [model.blocks[-1].norm1]
-    elif args.model in ['vgg11', 'vgg19']:
-        target_layers = [model.features[-1]]
-    elif args.model in ['ecpnet']:
-        target_layers = [model.conv_trans_12.trans_block.norm2]
-
-    if args.method not in methods:
-        raise Exception(f"Method {args.method} not implemented")
-
-    """
-        reshape and transform
-    """
-    if args.model in ['vit_t', 'ecpnet']:
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=vit_reshape_transform)
-    elif args.model in ['pit_xs']:
+    elif args.model in ['swin_vit_t']:
+        target_layers = [model.layers[-1].blocks[-1].norm1]
+        cam = methods[args.method](model=model,
+                                   target_layers=target_layers,
+                                   use_cuda=args.use_cuda,
+                                   reshape_transform=swin_reshape_transform)
+    elif args.model in ['pit_xs', 'pit_s']:
+        target_layers = [model.transformers[-1].blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=pit_reshape_transform)
     elif args.model in ['deit_s']:
+        target_layers = [model.blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=deit_reshape_transform)
-    elif args.model in ['swin_vit_t']:
+    elif args.model in ['vgg11', 'vgg19']:
+        target_layers = [model.features[-1]]
+    elif args.model in ['ecpnet']:
+        target_layers = [model.conv_trans_12.trans_block.norm2]
+    elif args.model in ['dvit_tiny']:
+        target_layers = [model.mhca_stages[-1].aggregate.bn]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
-                                   reshape_transform=swin_reshape_transform)
+                                   reshape_transform=dvit_reshape_transform)
     else:
+        target_layers = []
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda)
+
+    if args.method not in methods:
+        raise Exception(f"Method {args.method} not implemented")
+
 
     out_dir = os.path.join(args.output_dir, args.model)
     os.makedirs(out_dir, exist_ok=True)

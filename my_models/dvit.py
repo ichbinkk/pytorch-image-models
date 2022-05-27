@@ -734,6 +734,110 @@ def dvit_tiny(**kwargs):
 
 
 @register_model
+def dvit_F(**kwargs):
+    """mpvit_tiny :
+
+    - #paths : [2, 3, 3, 3]
+    - #layers : [1, 2, 4, 1]
+    - #channels : [64, 96, 176, 216]
+    - MLP_ratio : 2
+    Number of params: 5843736
+    FLOPs : 1654163812
+    Activations : 16641952
+    """
+
+    model = MPViT(
+        img_size=224,
+        num_stages=4,
+        num_path=[1, 1, 1, 1],
+        num_layers=[1, 1, 1, 1],
+        embed_dims=[64, 96, 176, 216],
+        mlp_ratios=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        **kwargs,
+    )
+    model.default_cfg = _cfg_mpvit()
+    return model
+
+@register_model
+def dvit_FL(**kwargs):
+    """mpvit_tiny :
+
+    - #paths : [2, 3, 3, 3]
+    - #layers : [1, 2, 4, 1]
+    - #channels : [64, 96, 176, 216]
+    - MLP_ratio : 2
+    Number of params: 5843736
+    FLOPs : 1654163812
+    Activations : 16641952
+    """
+
+    model = MPViT(
+        img_size=224,
+        num_stages=4,
+        num_path=[1, 1, 1, 1],
+        num_layers=[1, 2, 4, 1],
+        embed_dims=[64, 96, 176, 216],
+        mlp_ratios=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        **kwargs,
+    )
+    model.default_cfg = _cfg_mpvit()
+    return model
+
+@register_model
+def dvit_C(**kwargs):
+    """mpvit_tiny :
+
+    - #paths : [2, 3, 3, 3]
+    - #layers : [1, 2, 4, 1]
+    - #channels : [64, 96, 176, 216]
+    - MLP_ratio : 2
+    Number of params: 5843736
+    FLOPs : 1654163812
+    Activations : 16641952
+    """
+
+    model = MPViT(
+        img_size=224,
+        num_stages=4,
+        num_path=[1, 1, 1, 1],
+        num_layers=[1, 1, 1, 1],
+        embed_dims=[64, 96, 176, 216],
+        mlp_ratios=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        **kwargs,
+    )
+    model.default_cfg = _cfg_mpvit()
+    return model
+
+@register_model
+def dvit_CL(**kwargs):
+    """mpvit_tiny :
+
+    - #paths : [2, 3, 3, 3]
+    - #layers : [1, 2, 4, 1]
+    - #channels : [64, 96, 176, 216]
+    - MLP_ratio : 2
+    Number of params: 5843736
+    FLOPs : 1654163812
+    Activations : 16641952
+    """
+
+    model = MPViT(
+        img_size=224,
+        num_stages=4,
+        num_path=[1, 1, 1, 1],
+        num_layers=[1, 2, 4, 1],
+        embed_dims=[64, 96, 176, 216],
+        mlp_ratios=[2, 2, 2, 2],
+        num_heads=[8, 8, 8, 8],
+        **kwargs,
+    )
+    model.default_cfg = _cfg_mpvit()
+    return model
+
+@register_model
 def dvit_base(**kwargs):
     """mpvit_tiny :
 
