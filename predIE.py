@@ -56,7 +56,7 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
 '''
 parser.add_argument('--model', default='resnet50', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-ep', '--epochs', type=int, default=100, metavar='N',
                     help='number of epochs to train (default: )')
@@ -66,6 +66,10 @@ parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metava
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 parser.add_argument('--ablate', type=bool, default=False, metavar='N',
                     help='Flag to ablate (default: False)')
+parser.add_argument('-d', '--device', type=str, default=0, metavar='N',
+                    help='device index (default: 0)')
+parser.add_argument('-e', '--experiment', type=str, default=0, metavar='N',
+                    help='experiment index (default: 0)')
 
 
 def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_epochs=25, is_inception=False):
@@ -248,7 +252,7 @@ if __name__ == '__main__':
 
     '''check output path for different data and models'''
     if not args.ablate:
-        out_path = os.path.join('./output', fn, model_name, str(2))
+        out_path = os.path.join('./output', fn, args.experiment, model_name)
     else:
         out_path = os.path.join('./output', fn, 'Ablation', model_name)
     if not os.path.exists(out_path):
@@ -319,7 +323,7 @@ if __name__ == '__main__':
                                                        ) for x in ['train', 'val']}  # 这里的shuffle可以打乱数据顺序！！！
 
     # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:"+args.device if torch.cuda.is_available() else "cpu")
 
     # Send the model to GPU
     # model = torch.nn.DataParallel(model_ft, device_ids=device_id)
@@ -333,11 +337,11 @@ if __name__ == '__main__':
         for name, param in model_ft.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                print("\t",name)
-    else:
-        for name, param in model_ft.named_parameters():
-            if param.requires_grad == True:
-                print("\t",name)
+                print("\t", name)
+    # else:
+        # for name, param in model_ft.named_parameters():
+            # if param.requires_grad == True:
+                # print("\t",name)
 
     # Observe that all parameters are being optimized
 
