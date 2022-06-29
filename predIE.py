@@ -54,7 +54,7 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='dvit_CL', type=str, metavar='MODEL',
+parser.add_argument('--model', default='resnet50', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 32)')
@@ -64,7 +64,7 @@ parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar
                     help='Flag to use fine tuneing(default: False)')
 parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metavar='N',
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
-parser.add_argument('--ablate', type=bool, default=True, metavar='N',
+parser.add_argument('--ablate', type=bool, default=False, metavar='N',
                     help='Flag to ablate (default: False)')
 
 
@@ -248,7 +248,7 @@ if __name__ == '__main__':
 
     '''check output path for different data and models'''
     if not args.ablate:
-        out_path = os.path.join('./output', fn, model_name)
+        out_path = os.path.join('./output', fn, model_name, str(2))
     else:
         out_path = os.path.join('./output', fn, 'Ablation', model_name)
     if not os.path.exists(out_path):
