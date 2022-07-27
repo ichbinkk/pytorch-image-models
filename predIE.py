@@ -19,7 +19,7 @@ import torchvision
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
 import time
-
+from tqdm import tqdm
 import copy
 
 from torch.autograd import Variable
@@ -49,16 +49,20 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # Dataset / Model parameters
 parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
+parser.add_argument('--out_dir', metavar='DIR', default='./output/test',
+                    help='path to dataset')
+parser.add_argument('-e', '--experiment', type=str, default=2, metavar='N',
+                    help='experiment index (default: 1)')
 '''
     Setting model and training params, some can use parser to get value.
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='efficientnet_b4', type=str, metavar='MODEL',
+parser.add_argument('--model', default='efficientnet_b3', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=100, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -66,10 +70,8 @@ parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metava
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 parser.add_argument('--ablate', type=bool, default=False, metavar='N',
                     help='Flag to ablate (default: False)')
-parser.add_argument('-d', '--device', type=str, default=1, metavar='N',
+parser.add_argument('-d', '--device', type=str, default=3, metavar='N',
                     help='device index (default: 0)')
-parser.add_argument('-e', '--experiment', type=str, default=2, metavar='N',
-                    help='experiment index (default: 1)')
 
 
 def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_epochs=25, is_inception=False):
@@ -98,7 +100,7 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
     # seg_index
     index = seg_index(os.path.join(infile, 'val.txt'))
 
-    for epoch in range(num_epochs):
+    for epoch in tqdm(range(num_epochs), desc='{}'.format(args.model), unit='epoch'):
         # print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         # print('-' * 10)
 
@@ -192,11 +194,10 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
                     Er[i] = 1 - np.abs((E1 - E2) / E1)
                 Er = np.mean(Er)
                 metrics_history[epoch][2] = Er
-                'Epoch {}/{}'.format(epoch, num_epochs - 1)
 
                 '''print metrics for each epoch'''
-                print('[Epoch {}/{}] Train_loss: {:.4f} | Val_loss: {:.4f} | LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f} | Er: {:.2%}'.format(epoch+1,
-                      num_epochs, train_loss, val_loss, LME, Rs, Mae, R2_s, Er))
+                # print('[Epoch {}/{}] Train_loss: {:.4f} | Val_loss: {:.4f} | LME: {:.2%} | RMSE: {:.2f}J | MAE: {:.2f}J | R2_s: {:.2f} | Er: {:.2%}'.format(epoch+1,
+                #       num_epochs, train_loss, val_loss, LME, Rs, Mae, R2_s, Er))
                 # print('GT: {:.2f}J | ECP: {:.2f}J | Er: {:.2%}'.format(E1, E2, Er))
 
 
@@ -216,8 +217,8 @@ def train_model(model, dataloaders, criterion, optimizer, GT, aVal, bVal, num_ep
         # print()
 
     time_elapsed = time.time() - since
-    print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-
+    # print('Training complete in time of {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    #
     print('Best model with Min_metric: {:.2f} is in Epoch {}/{}'.format(min_metric, best_epoch+1, num_epochs))
 
     '''load best model weights'''
@@ -252,9 +253,9 @@ if __name__ == '__main__':
 
     '''check output path for different data and models'''
     if not args.ablate:
-        out_path = os.path.join('./output', fn, str(args.experiment), model_name)
+        out_path = os.path.join(args.out_dir, model_name)
     else:
-        out_path = os.path.join('./output', fn, 'Ablation', model_name)
+        out_path = os.path.join(args.out_dir, 'Ablation', model_name)
     if not os.path.exists(out_path):
         # 如果不存在则创建目录
         os.makedirs(out_path)
@@ -331,7 +332,7 @@ if __name__ == '__main__':
     model_ft = model_ft.to(device)
 
     params_to_update = model_ft.parameters()
-    print("Params to learn:")
+    # print("Params to learn:")
     if feature_extract:
         params_to_update = []
         for name, param in model_ft.named_parameters():
@@ -376,7 +377,7 @@ if __name__ == '__main__':
     # plt.xticks(np.arange(1, num_epochs+1, 1.0))
     plt.legend()
     # plt.savefig(os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + '.png'))
-    plt.show()
+    # plt.show()
     hist = np.vstack((train_hist, val_hist))
     hist_path = os.path.join(out_path, 'Hist_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(hist_path, hist.T)
@@ -388,12 +389,12 @@ if __name__ == '__main__':
 
     ''' layered EC result '''
     plt.figure()
-    plt.title(model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "Validation Result")
+    plt.title(model_name + "_" + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size) + "_" + "Validation Result")
     ts = range(len(val_lab))
     plt.plot(ts, val_lab, label="val_lab")
     plt.plot(ts, result, label="pred_lab")
     plt.legend()
-    plt.show()
+    # plt.show()
 
     res = np.vstack((val_lab, result))
     res_path = os.path.join(out_path, 'Results_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
@@ -423,11 +424,11 @@ if __name__ == '__main__':
 
     RE_history = metrics_history[:, 2]
     plt.figure()
-    plt.plot(range(args.epochs), RE_history, label="Model-wise accuracy history vs. Epoch")
+    plt.plot(range(args.epochs), RE_history, label="Part-wise accuracy history vs. Epoch")
     plt.legend()
-    plt.show()
+    # plt.show()
 
-    metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
+    # metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
 
     '''best performance'''
     res_error = [[model_name, np.max(layer_error), np.min(layer_error), np.std(layer_error), Mae, R2_s, Rs, np.mean(layer_error), Er]]
