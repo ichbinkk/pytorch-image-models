@@ -24,14 +24,14 @@ from ecp_utils import *
 def get_args():
     parser = argparse.ArgumentParser()
     # Dataset / Model parameters
-    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V4',
+    parser.add_argument('--output_dir', metavar='DIR', default='./cam/V1',
                         help='path to output')
 
     ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t deit_s vgg11 '''
-    parser.add_argument('--model', default='pit_s', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='efficientnet_b4', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
 
-    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V4_ec',
+    parser.add_argument('--pth_dir', metavar='DIR', default='./output/lattice_ec',
                         help='path to pth file')
 
     parser.add_argument('--use-cuda', action='store_true', default=False,
@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./input_images/V4',
+        default='./input_images/V1',
         help='Input image path')
 
     parser.add_argument('--aug_smooth', action='store_true',
@@ -193,35 +193,35 @@ if __name__ == '__main__':
     """
         select target_layers
     """
-    if args.model in ['resnet50', 'resnet152']:
+    if 'resnet' in args.model:
         target_layers = [model.layer4[-1]]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda)
-    elif args.model in ['efficientnet_b3', 'efficientnet_b4']:
+    elif 'efficientnet' in args.model:
         target_layers = [model.blocks[-2][0]]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda)
-    elif args.model in ['vit_t']:
+    elif args.model in ['vit_t', 'vit_s']:
         target_layers = [model.blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=vit_reshape_transform)
-    elif args.model in ['swin_vit_t']:
+    elif 'swin_vit' in args.model:
         target_layers = [model.layers[-1].blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=swin_reshape_transform)
-    elif args.model in ['pit_xs', 'pit_s']:
+    elif 'pit' in args.model:
         target_layers = [model.transformers[-1].blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=pit_reshape_transform)
-    elif args.model in ['deit_s']:
+    elif 'deit' in args.model:
         target_layers = [model.blocks[-1].norm1]
         cam = methods[args.method](model=model,
                                    target_layers=target_layers,

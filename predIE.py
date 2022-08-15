@@ -47,22 +47,22 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V1_ec',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/test',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/V1_ec',
                     help='path to dataset')
-parser.add_argument('-e', '--experiment', type=str, default=2, metavar='N',
-                    help='experiment index (default: 1)')
+# parser.add_argument('-e', '--experiment', type=str, default=2, metavar='N',
+#                     help='experiment index (default: 1)')
 '''
     Setting model and training params, some can use parser to get value.
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='efficientnet_b3', type=str, metavar='MODEL',
+parser.add_argument('--model', default='dvit_tiny', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -70,7 +70,7 @@ parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metava
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 parser.add_argument('--ablate', type=bool, default=False, metavar='N',
                     help='Flag to ablate (default: False)')
-parser.add_argument('-d', '--device', type=str, default=3, metavar='N',
+parser.add_argument('-d', '--device', type=str, default=1, metavar='N',
                     help='device index (default: 0)')
 
 
@@ -443,6 +443,8 @@ if __name__ == '__main__':
 
 
     ##########################################################################
-    '''Test phase'''
+    '''
+    Test phase
+    '''
     # print("------Test using best trained model------")
     # eval_EC(model_name, model_ft, test_path, infile, args.eval_phase)
