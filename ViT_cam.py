@@ -28,10 +28,10 @@ def get_args():
                         help='path to output')
 
     ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t deit_s vgg11 '''
-    parser.add_argument('--model', default='efficientnet_b4', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='deit_s', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
 
-    parser.add_argument('--pth_dir', metavar='DIR', default='./output/lattice_ec',
+    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V1_ec',
                         help='path to pth file')
 
     parser.add_argument('--use-cuda', action='store_true', default=False,
@@ -117,6 +117,9 @@ def dvit_reshape_transform(tensor, height=7, width=7):
 def image2cam(image_path, cam, outdir):
     rgb_img = cv2.imread(image_path, 1)[:, :, ::-1]
     rgb_img = cv2.resize(rgb_img, (image_size, image_size))
+
+    # rgb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2GRAY)
+
     rgb_img = np.float32(rgb_img) / 255
     input_tensor = preprocess_image(rgb_img, mean=[0.5, 0.5, 0.5],
                                     std=[0.5, 0.5, 0.5])
@@ -130,7 +133,7 @@ def image2cam(image_path, cam, outdir):
     cam.batch_size = 32
 
     grayscale_cam = cam(input_tensor=input_tensor,
-                        target_category=target_category,
+                        # target_category=target_category,
                         eigen_smooth=args.eigen_smooth,
                         aug_smooth=args.aug_smooth)
 
@@ -173,22 +176,22 @@ if __name__ == '__main__':
     pth_file = os.path.join(args.pth_dir, args.model, 'Best_checkpoint.pth')
     state_dict = torch.load(pth_file)
 
-    # model.load_state_dict(state_dict)  # 重新加载这个模型。
+    model.load_state_dict(state_dict)  # 重新加载这个模型。
 
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
-        new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
-
-    # load params
-    model.load_state_dict(new_state_dict)  # 重新加载这个模型。
+    # new_state_dict = OrderedDict()
+    # for k, v in state_dict.items():
+    #     name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
+    #     new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
+    #
+    # # load params
+    # model.load_state_dict(new_state_dict)  # 重新加载这个模型。
 
     model.eval()
 
     if args.use_cuda:
         model = model.cuda()
 
-    print(model)
+    # print(model)
 
     """
         select target_layers
@@ -245,7 +248,6 @@ if __name__ == '__main__':
 
     if args.method not in methods:
         raise Exception(f"Method {args.method} not implemented")
-
 
     out_dir = os.path.join(args.output_dir, args.model)
     os.makedirs(out_dir, exist_ok=True)
