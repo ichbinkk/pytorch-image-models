@@ -60,7 +60,7 @@ parser.add_argument('--out_dir', metavar='DIR', default='./output/V1_ec',
 '''
 parser.add_argument('--model', default='dvit_tiny', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
