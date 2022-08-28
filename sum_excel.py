@@ -6,7 +6,7 @@ import os
 # Set argparse
 parser = argparse.ArgumentParser(description='Sum_excel')
 
-parser.add_argument('--data_dir', metavar='DIR', default='./output/V4_ec/3',
+parser.add_argument('--data_dir', metavar='DIR', default='./output/V5_ec',
                     help='path to excels')
 
 
