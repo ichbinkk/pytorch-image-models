@@ -8,8 +8,6 @@ Finetuning Torchvision Models For 3D-ECP
 from __future__ import print_function
 from __future__ import division
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
-device_id = [0, 1, 2, 3]
 
 import torch
 import torch.nn as nn
@@ -36,6 +34,10 @@ from sklearn.metrics import r2_score  # R square
 from ecp_utils import *
 from torch.utils.tensorboard import SummaryWriter
 
+torch.cuda.empty_cache()
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+device_id = [0, 1, 2, 3]
+
 # Number of classes in the dataset
 num_classes = 1
 
@@ -47,12 +49,12 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V1_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec_2',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/V1_ec',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/EC-syy-V2-t2',
                     help='path to dataset')
-# parser.add_argument('-e', '--experiment', type=str, default=2, metavar='N',
-#                     help='experiment index (default: 1)')
+parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
+                    help='experiment index (default: 1)')
 '''
     Setting model and training params, some can use parser to get value.
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
@@ -60,7 +62,7 @@ parser.add_argument('--out_dir', metavar='DIR', default='./output/V1_ec',
 '''
 parser.add_argument('--model', default='dvit_tiny', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
                     help='input batch size for training (default: 32)')
 parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
@@ -70,7 +72,7 @@ parser.add_argument('-fe', '--feature-extract', type=bool, default=False, metava
                     help='False to finetune the whole model. True to update the reshaped layer params(default: False)')
 parser.add_argument('--ablate', type=bool, default=False, metavar='N',
                     help='Flag to ablate (default: False)')
-parser.add_argument('-d', '--device', type=str, default=1, metavar='N',
+parser.add_argument('-d', '--device', type=str, default=0, metavar='N',
                     help='device index (default: 0)')
 
 
@@ -249,11 +251,11 @@ if __name__ == '__main__':
     fn = infile.split('/')[-1]
 
     # Initialize the model for this run
-    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained)
+    model_ft, input_size, data_transforms = initialize_model(model_name, num_classes, feature_extract, use_pretrained)
 
     '''check output path for different data and models'''
     if not args.ablate:
-        out_path = os.path.join(args.out_dir, model_name)
+        out_path = os.path.join(args.out_dir, args.experiment, model_name)
     else:
         out_path = os.path.join(args.out_dir, 'Ablation', model_name)
     if not os.path.exists(out_path):
@@ -290,27 +292,11 @@ if __name__ == '__main__':
     ######################################################################
     # Load Data
     # ---------
-    # Just normalization for validation
-    data_transforms = {
-        'train': transforms.Compose([
-            # transforms.RandomResizedCrop(input_size),
-            # transforms.RandomHorizontalFlip(),
-            # transforms.Resize(input_size),
-            # transforms.CenterCrop(input_size),
-            transforms.Resize([input_size, input_size]),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize([input_size, input_size]),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-    }
+
 
     print("Initializing Datasets and Dataloaders...")
-    # load dataset
 
+    # load dataset
     image_datasets = {x: customData(img_path=infile,
                                     txt_path=os.path.join(infile, (x + '.txt')),
                                     data_transforms=data_transforms,
@@ -431,20 +417,26 @@ if __name__ == '__main__':
     # metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
 
     '''best performance'''
-    res_error = [[model_name, np.max(layer_error), np.min(layer_error), np.std(layer_error), Mae, R2_s, Rs, np.mean(layer_error), Er]]
-    error_path = os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
+    # res_error = [[model_name, np.max(layer_error), np.min(layer_error), np.std(layer_error), Mae, R2_s, Rs, np.mean(layer_error), Er]]
+    res_error = [[model_name, Rs, np.mean(layer_error), Er]]
+
+    # error_path = os.path.join(out_path, 'Error_' + str(num_epochs) + "_" + str(lr) + "_" + str(batch_size))
     # np.savetxt(error_path, np.array(res_error), fmt='%s')
+
+
+    ########################################
+    '''
+    Test phase
+    '''
+    # print("------Test using best trained model------")
+    res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val2.txt')
+    res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
+
+    res_error[0].extend(res_error2)
+    res_error[0].extend(res_error3)
 
     ''' 
        Save excel
     '''
     excel_path = res_path + '.xlsx'
     save_excel(res_error, metrics_history, res.T, hist.T, excel_path)
-
-
-    ##########################################################################
-    '''
-    Test phase
-    '''
-    # print("------Test using best trained model------")
-    # eval_EC(model_name, model_ft, test_path, infile, args.eval_phase)

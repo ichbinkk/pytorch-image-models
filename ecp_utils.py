@@ -29,6 +29,11 @@ from PIL import Image
 import timm.models as tm
 import pandas as pd
 
+# 衡量误差
+from sklearn.metrics import mean_squared_error  # 均方误差
+from sklearn.metrics import mean_absolute_error  # 平方绝对误差
+from sklearn.metrics import r2_score  # R square
+
 
 # set train and val data prefixs
 prefixs = None
@@ -428,7 +433,23 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         print("Invalid model name, exiting...")
         exit()
 
-    return model_ft, input_size
+    data_transforms = {
+        'train': transforms.Compose([
+            # transforms.RandomResizedCrop(input_size),
+            # transforms.RandomHorizontalFlip(),
+            # transforms.Resize(input_size),
+            # transforms.CenterCrop(input_size),
+            transforms.Resize([input_size, input_size]),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'val': transforms.Compose([
+            transforms.Resize([input_size, input_size]),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
+    return model_ft, input_size, data_transforms
 
 
 # use PIL Image to read image
@@ -585,6 +606,72 @@ def draw_txt(file,k):
     data = np.loadtxt(file, usecols=(k))
     plt.plot(data)
     plt.show()
+
+
+def eval_EC(model_name, device, data_transforms, model, infile, gt_file):
+    '''
+        load Val Ground Truth dataset to compare in every Val epoch
+    '''
+    val_lab = loadColStr(os.path.join(infile, gt_file), 1)
+    _, aVal, bVal = Normalize(val_lab)
+
+    # train_lab = loadColStr(os.path.join(infile, 'train.txt'), 1)
+    # _, aVal, bVal = Normalize(train_lab)
+
+
+    ''' 
+    Val phase 
+    '''
+    # load dataset
+    image_datasets = customData(img_path=infile,
+                                    txt_path=os.path.join(infile, gt_file),
+                                    data_transforms=data_transforms,
+                                    dataset='val')
+
+    # wrap your data and label into Tensor
+    dataloaders_dict = torch.utils.data.DataLoader(image_datasets,
+                                                       batch_size=8,
+                                                       shuffle=False,
+                                                       # num_workers=1
+                                                       )
+    model.eval()
+    result = list()
+
+    # Iterate over data.
+    for inputs, labels in dataloaders_dict:
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        outputs = model(inputs)
+        outputs = outputs.view(-1)
+
+        '''save val result'''
+        temp = outputs.detach().cpu().numpy()
+        for i in range(outputs.size()[0]):
+            result.append(temp[i])
+    result = np.array(result)
+    result = InvNormalize(result, aVal, bVal)
+
+    ''' layered error '''
+    Rs = mean_squared_error(val_lab, result) ** 0.5
+    # Mae = mean_absolute_error(val_lab, result)
+    # R2_s = r2_score(val_lab, result)
+
+    error = np.abs((result-val_lab) / val_lab)
+    LME = np.mean(error)
+
+    '''total error'''
+    E1 = np.sum(val_lab)
+    E2 = np.sum(result)
+    Er = 1 - np.abs((E1 - E2) / E1)
+
+    '''Print Best metrics'''
+    print('For {} >> RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(gt_file, Rs, LME, Er))
+
+    '''performance'''
+    res_error = [gt_file, Rs, LME, Er]
+
+    return res_error
 
 
 if __name__ == "__main__":
