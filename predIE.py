@@ -49,9 +49,9 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec_2',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V3_ec',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/EC-syy-V2-t2',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/V3_ec',
                     help='path to dataset')
 parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
                     help='experiment index (default: 1)')
@@ -62,9 +62,9 @@ parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
 '''
 parser.add_argument('--model', default='dvit_tiny', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
-parser.add_argument('-b', '--batch-size', type=int, default=8, metavar='N',
+parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -404,6 +404,7 @@ if __name__ == '__main__':
 
     '''total error'''
     Er = metrics_history[best_epoch, 2]
+    Er = 1 - Er
 
     '''Print Best metrics'''
     print('RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(Rs, np.mean(layer_error), Er))
@@ -429,11 +430,13 @@ if __name__ == '__main__':
     Test phase
     '''
     # print("------Test using best trained model------")
-    res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val2.txt')
-    res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
 
-    res_error[0].extend(res_error2)
-    res_error[0].extend(res_error3)
+    # In case it have two more validation dataset
+    # res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val2.txt')
+    # res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
+    #
+    # res_error[0].extend(res_error2)
+    # res_error[0].extend(res_error3)
 
     ''' 
        Save excel

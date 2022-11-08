@@ -6,7 +6,7 @@ import os
 # Set argparse
 parser = argparse.ArgumentParser(description='Sum_excel')
 
-parser.add_argument('--data_dir', metavar='DIR', default='./output/EC-syy-V2-t2',
+parser.add_argument('--data_dir', metavar='DIR', default='./output/V3_ec/1',
                     help='path to excels')
 
 
@@ -17,7 +17,8 @@ def create_matrix1(data):
     for v in table[0]:
         res.append(v)
     # matrix1.append([res[0], res[6], res[7] * 100, res[8] * 100])
-    matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100,res[4], res[5], res[6] * 100, res[7] * 100,res[8], res[9], res[10] * 100, res[11] * 100])
+    # matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100,res[4], res[5], res[6] * 100, res[7] * 100,res[8], res[9], res[10] * 100, res[11] * 100])
+    matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100])
     return res[0]
 
 
