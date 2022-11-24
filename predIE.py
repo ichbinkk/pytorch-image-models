@@ -49,9 +49,9 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec_2',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/V4_ec_2',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/V4_ec',
                     help='path to dataset')
 parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
                     help='experiment index (default: 1)')
@@ -373,7 +373,7 @@ if __name__ == '__main__':
 
     #######################################################################
     ''' 
-        Val phase
+        Validation phase
     '''
 
     ''' layered EC result '''
@@ -393,7 +393,6 @@ if __name__ == '__main__':
     ''' layered error '''
     # writer.add_scalars('Validation/result', {'val_lab': val_lab, 'pred_lab': result}, ts)
 
-    # print()
     # print('[Layered error]')
     # print('Mean(error): {:.2%} | Max(error): {:.2%} | Min(error): {:.2%} | Std(error): {:.2f}'.format(
     #     np.mean(error), np.max(error), np.min(error), np.std(error)))
@@ -401,24 +400,22 @@ if __name__ == '__main__':
     Rs = mean_squared_error(val_lab, result) ** 0.5
     Mae = mean_absolute_error(val_lab, result)
     R2_s = r2_score(val_lab, result)
-    # print()
-    # print('[Statistic error]')
-    # print('RMSE: {:.2f}J | MAE: {:.2f} | R2_s: {:.2f}.'.format(Rs, Mae, R2_s))
+
 
     '''total error'''
     Er = metrics_history[best_epoch, 2]
-    Er = 1 - Er
+    # Er = 1 - Er
+
 
     '''Print Best metrics'''
     print('RMSE: {:.2f}J | LME: {:.2%} | Er: {:.2%} '.format(Rs, np.mean(layer_error), Er))
 
     RE_history = metrics_history[:, 2]
-    plt.figure()
-    plt.plot(range(args.epochs), RE_history, label="Part-wise accuracy history vs. Epoch")
-    plt.legend()
+    # plt.figure()
+    # plt.plot(range(args.epochs), RE_history, label="Part-wise accuracy history vs. Epoch")
+    # plt.legend()
     # plt.show()
 
-    # metrics_path = os.path.join(out_path, 'Metrics_history.xlsx')
 
     '''best performance'''
     # res_error = [[model_name, np.max(layer_error), np.min(layer_error), np.std(layer_error), Mae, R2_s, Rs, np.mean(layer_error), Er]]
@@ -434,11 +431,11 @@ if __name__ == '__main__':
     '''
     # print("------Test using best trained model------")
 
-    # In case it have two more validation dataset
-    # res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val2.txt')
-    # res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
-    #
+    ''' In case it have two more validation dataset '''
+    # res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val_mount.txt')
     # res_error[0].extend(res_error2)
+
+    # res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
     # res_error[0].extend(res_error3)
 
     ''' 
