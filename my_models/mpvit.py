@@ -113,8 +113,7 @@ class Conv2d_BN(nn.Module):
                 fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(mean=0.0, std=np.sqrt(2.0 / fan_out))
 
-        self.act_layer = act_layer() if act_layer is not None else nn.Identity(
-        )
+        self.act_layer = act_layer() if act_layer is not None else nn.Identity()
 
     def forward(self, x):
         """foward function"""

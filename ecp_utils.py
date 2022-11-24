@@ -251,12 +251,12 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         model_ft.head = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == "mpvit_tiny":
+    elif "mpvit" in model_name:
         """
         mpvit
         """
         model_ft = create_model(
-            "mpvit_tiny",
+            model_name,
             pretrained=use_pretrained,
             num_classes=num_classes,
             drop_rate=drop,
@@ -268,76 +268,7 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
         #     param.requires_grad = True  # it was require_grad
         input_size = 224
 
-    elif model_name == "mpvit_xsmall":
-        """
-        mpvit
-        """
-        model_ft = create_model(
-            "mpvit_xsmall",
-            pretrained=use_pretrained,
-            num_classes=num_classes,
-            drop_rate=drop,
-            drop_path_rate=drop_path,
-            drop_block_rate=drop_block,
-        )
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # for param in model_ft.trans_cls_head.parameters():
-        #     param.requires_grad = True  # it was require_grad
-        input_size = 224
-
-    elif model_name == "mpvit_small":
-        """
-        mpvit
-        """
-        model_ft = create_model(
-            "mpvit_small",
-            pretrained=use_pretrained,
-            num_classes=num_classes,
-            drop_rate=drop,
-            drop_path_rate=drop_path,
-            drop_block_rate=drop_block,
-        )
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # for param in model_ft.trans_cls_head.parameters():
-        #     param.requires_grad = True  # it was require_grad
-        input_size = 224
-
-    elif model_name == "mpvit_base":
-        """
-        mpvit
-        """
-        model_ft = create_model(
-            "mpvit_base",
-            pretrained=use_pretrained,
-            num_classes=num_classes,
-            drop_rate=drop,
-            drop_path_rate=drop_path,
-            drop_block_rate=drop_block,
-        )
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # for param in model_ft.trans_cls_head.parameters():
-        #     param.requires_grad = True  # it was require_grad
-        input_size = 224
-
-    elif model_name == "dvit_tiny":
-        """
-        dvit_tiny
-        """
-        model_ft = create_model(
-            "dvit_tiny",
-            pretrained=use_pretrained,
-            num_classes=num_classes,
-            drop_rate=drop,
-            drop_path_rate=drop_path,
-            drop_block_rate=drop_block,
-        )
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # for param in model_ft.trans_cls_head.parameters():
-        #     param.requires_grad = True  # it was require_grad
-        input_size = 224
-
-
-    elif model_name in ["dvit_F", "dvit_FL", "dvit_C", "dvit_CL"]:
+    elif 'dvit' in model_name:
         """
         dvit_tiny
         """
@@ -350,24 +281,6 @@ def initialize_model(model_name, num_classes=1, feature_extract=False, use_pretr
             drop_block_rate=drop_block,
         )
         set_parameter_requires_grad(model_ft, feature_extract)
-        input_size = 224
-
-
-    elif model_name == "dvit_base":
-        """
-        dvit_base
-        """
-        model_ft = create_model(
-            "dvit_base",
-            pretrained=use_pretrained,
-            num_classes=num_classes,
-            drop_rate=drop,
-            drop_path_rate=drop_path,
-            drop_block_rate=drop_block,
-        )
-        set_parameter_requires_grad(model_ft, feature_extract)
-        # for param in model_ft.trans_cls_head.parameters():
-        #     param.requires_grad = True  # it was require_grad
         input_size = 224
 
     elif model_name == "alexnet":

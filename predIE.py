@@ -49,9 +49,9 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V3_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec_2',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/V3_ec',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/V4_ec_2',
                     help='path to dataset')
 parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
                     help='experiment index (default: 1)')
@@ -60,11 +60,11 @@ parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='dvit_tiny', type=str, metavar='MODEL',
+parser.add_argument('--model', default='dvit_N5', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=10, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -257,7 +257,7 @@ if __name__ == '__main__':
     if not args.ablate:
         out_path = os.path.join(args.out_dir, args.experiment, model_name)
     else:
-        out_path = os.path.join(args.out_dir, 'Ablation', model_name)
+        out_path = os.path.join(args.out_dir, 'Ablation', args.experiment, model_name)
     if not os.path.exists(out_path):
         # 如果不存在则创建目录
         os.makedirs(out_path)
@@ -268,17 +268,20 @@ if __name__ == '__main__':
 
     '''
             Analyze flops and params
-        '''
-    if args.model in ['ecpnet', 'ecpnetno']:
-        input = (torch.rand(1, 3, 224, 224), torch.rand(1, 1, 4))
-    else:
-        input = (torch.rand(1, 3, 224, 224),)
-    '''[1] using fvcore'''
-    # from fvcore.nn import FlopCountAnalysis, parameter_count_table, parameter_count
-    # print(parameter_count_table(model_ft))
+    '''
+    # if args.model in ['ecpnet', 'ecpnetno']:
+    #     input = (torch.rand(1, 3, 224, 224), torch.rand(1, 1, 4))
+    # else:
+    #     input = (torch.rand(1, 3, 224, 224),)
     #
+    # '''[1] using fvcore'''
+    # from fvcore.nn import FlopCountAnalysis, parameter_count_table, parameter_count
+    # # print(parameter_count_table(model_ft))
+    # param = sum(p.numel() for p in model_ft.parameters() if p.requires_grad)
     # flops = FlopCountAnalysis(model_ft, input)
-    # print("FLOPs: ", flops.total())
+    #
+    # print(f"Number of parameter: {param / 1.0e6} M")
+    # print(f"FLOPs: {flops.total()/1.0e9} G")
 
     '''[2] using thop'''
     # from thop import profile
