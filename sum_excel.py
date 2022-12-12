@@ -7,7 +7,7 @@ import os
 parser = argparse.ArgumentParser(description='Sum_excel')
 
 
-parser.add_argument('--data_dir', metavar='DIR', default='./output/V4_ec/20',
+parser.add_argument('--data_dir', metavar='DIR', default='./output/V4_ec/90_mount',
                     help='path to excels')
 
 
@@ -23,12 +23,12 @@ def create_matrix1(data):
     # For single excel records 9 values
     # matrix1.append([res[0], res[6], res[7] * 100, res[8] * 100])
     # For single excel records 3 values
-    # matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100])
+    matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100])
 
     """
         Two or more validation dataset
     """
-    matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100, res[4], res[5], res[6] * 100, res[7] * 100])
+    # matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100, res[4], res[5], res[6] * 100, res[7] * 100])
     # matrix1.append([res[0], res[1], res[2] * 100, res[3] * 100, res[4], res[5], res[6] * 100, res[7] * 100,res[8], res[9], res[10] * 100, res[11] * 100])
 
 
@@ -67,6 +67,7 @@ def create_matrix3(data, model_name):
             a = list(line)
             matrix3[i+1].append(a[0])
             matrix3[i + 1].append(a[1])
+
 
 if __name__ == "__main__":
     # get all args params
