@@ -24,14 +24,14 @@ from ecp_utils import *
 def get_args():
     parser = argparse.ArgumentParser()
     # Dataset / Model parameters
-    parser.add_argument('--output_dir', metavar='DIR', default='./cam/yy',
+    parser.add_argument('--output_dir', metavar='DIR', default='./cam/dd_V1',
                         help='path to output')
 
     ''' efficientnet_b4 resnet swin_vit_t  pit_xs vit_t deit_s vgg11 '''
-    parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
+    parser.add_argument('--model', default='resnet50', type=str, metavar='MODEL',
                         help='Name of model to train (default: "resnet18"')
 
-    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V4_ec',
+    parser.add_argument('--pth_dir', metavar='DIR', default='./output/V4_ec/100_mount',
                         help='path to pth file')
 
     parser.add_argument('--use-cuda', action='store_true', default=False,
@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./input_images/yy',
+        default='./input_images/dd_V1',
         help='Input image path')
 
     parser.add_argument('--aug_smooth', action='store_true',
@@ -178,14 +178,15 @@ if __name__ == '__main__':
 
     # model.load_state_dict(state_dict)  # 重新加载这个模型。
 
-    # For ViT, removing "module"
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
-        new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
-
-    # load params
-    model.load_state_dict(new_state_dict)  # 重新加载这个模型。
+    '''
+    For ViT, removing "module"; otherwise,not use
+    '''
+    if args.model in ['vit_t', 'vit_s']:
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:]  # remove module.，表面从第7个key值字符取到最后一个字符，正好去掉了module.
+            new_state_dict[name] = v  # 新字典的key值对应的value为一一对应的值。
+        model.load_state_dict(new_state_dict)  # 重新加载这个模型。
 
     model.eval()
 
