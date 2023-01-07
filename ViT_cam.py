@@ -176,7 +176,7 @@ if __name__ == '__main__':
     pth_file = os.path.join(args.pth_dir, args.model, 'Best_checkpoint.pth')
     state_dict = torch.load(pth_file)
 
-    # model.load_state_dict(state_dict)  # 重新加载这个模型。
+    model.load_state_dict(state_dict)
 
     '''
     For ViT, removing "module"; otherwise,not use
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     if args.use_cuda:
         model = model.cuda()
 
-    # print(model)
+    print(model)
 
     """
         select target_layers
