@@ -51,16 +51,16 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 # Dataset / Model parameters
 parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/V4_ec',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/V5_ec',
                     help='path to dataset')
-parser.add_argument('-e', '--experiment', type=str, default='1', metavar='N',
+parser.add_argument('-e', '--experiment', type=str, default='20', metavar='N',
                     help='experiment index (default: 1)')
 '''
     Setting model and training params, some can use parser to get value.
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='dvit_N5', type=str, metavar='MODEL',
+parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
