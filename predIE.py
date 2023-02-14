@@ -53,7 +53,7 @@ parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
                     help='path to dataset')
 parser.add_argument('--out_dir', metavar='DIR', default='./output/V5_ec',
                     help='path to dataset')
-parser.add_argument('-e', '--experiment', type=str, default='20', metavar='N',
+parser.add_argument('-e', '--experiment', type=str, default='20epoch', metavar='N',
                     help='experiment index (default: 1)')
 '''
     Setting model and training params, some can use parser to get value.
@@ -64,7 +64,7 @@ parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=60, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
