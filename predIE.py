@@ -49,9 +49,9 @@ parm = {}  # 初始化保存模块参数的parm字典
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Dataset / Model parameters
-parser.add_argument('--data_dir', metavar='DIR', default='../dataset/V4_ec',
+parser.add_argument('--data_dir', metavar='DIR', default='../dataset/yy',
                     help='path to dataset')
-parser.add_argument('--out_dir', metavar='DIR', default='./output/V5_ec',
+parser.add_argument('--out_dir', metavar='DIR', default='./output/yy_ec',
                     help='path to dataset')
 parser.add_argument('-e', '--experiment', type=str, default='20epoch', metavar='N',
                     help='experiment index (default: 1)')
@@ -60,11 +60,11 @@ parser.add_argument('-e', '--experiment', type=str, default='20epoch', metavar='
     Models to choose from [resnet, regnet, efficientnet, vit, pit, mixer, deit, swin-vit
     alexnet, vgg, squeezenet, densenet, inception]
 '''
-parser.add_argument('--model', default='vit_t', type=str, metavar='MODEL',
+parser.add_argument('--model', default='vit_s', type=str, metavar='MODEL',
                     help='Name of model to train (default: "resnet18"')
 parser.add_argument('-b', '--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 32)')
-parser.add_argument('-ep', '--epochs', type=int, default=60, metavar='N',
+parser.add_argument('-ep', '--epochs', type=int, default=20, metavar='N',
                     help='number of epochs to train (default: )')
 parser.add_argument('-ft', '--use-pretrained', type=bool, default=False, metavar='N',
                     help='Flag to use fine tuneing(default: False)')
@@ -432,11 +432,15 @@ if __name__ == '__main__':
     # print("------Test using best trained model------")
 
     ''' In case it have two more validation dataset '''
-    # res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val_mount.txt')
-    # res_error[0].extend(res_error2)
+    res_error2 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val2.txt')
+    res_error[0].extend(res_error2)
 
-    # res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
-    # res_error[0].extend(res_error3)
+    start_time = time.time()
+    res_error3 = eval_EC(model_name, device, data_transforms, model_ft, infile, 'val3.txt')
+    res_error[0].extend(res_error3)
+    end_time = time.time()
+    run_time = end_time - start_time
+    print(run_time)
 
     ''' 
        Save excel
